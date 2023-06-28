@@ -1,0 +1,35 @@
+
+
+Auth
+ sign up 
+ login
+
+Questions
+ get questions -> 
+  /api/questions - paginatinated
+  optional paramaters -> page , company  , tag , search
+
+
+ get single question ->
+  /api/questions/:id
+    return -> question , question title , Helpful tip
+             tag compnay
+
+  respond to question -> 
+   api/respond
+     post ->
+          audio file
+          question id
+
+  get Feedback
+   /api/interview/response/:id
+     return -> [
+      {
+       audio file,
+       transcript,
+       Feedback
+      }
+     ]
+             
+
+ 

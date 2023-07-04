@@ -17,7 +17,6 @@ const keyFilePath = path.join(__dirname, "..", "secret.json");
 const projectId = "august-charter-391200";
 const bucket = "interview-project-bucket";
 
-
 const uploadHandler = multer({
   storage: multerGoogleStorage.storageEngine({
     autoRetry: true,
@@ -31,73 +30,75 @@ const uploadHandler = multer({
   }),
 });
 
-
-
-function processRecording({ interview , recording_path , question }) {
+function processRecording({ interview, recording_path, question }) {
   /**
    *  Add to queue
    *
    */
 
   const payload = {
-   interview , 
-   recording_path , 
-   question
+    interview,
+    recording_path,
+    question,
   };
 
   createHttpTaskWithToken(payload);
 }
 
+// get paginated questions
 
+// get specific question
+
+// get interview responses
+
+// get single interview response
 
 router.post(
   "/submit-recording",
   uploadHandler.single("audio_response"),
   (req, res, next) => {
+    if (!req.file) throw Error("No file uploaded");
 
-   if (!req.file)
-     throw Error("No file uploaded");
+    const { question_id, user } = req.body;
 
-   const { question_id , user } = req.body;
+    const questionAsked = questionModel.findById(question_id);
 
-   const questionAsked = questionModel.findById(question_id);
+    if (!questionAsked) throw Error("Invalid question id");
 
-   if (!questionAsked) 
-     throw Error("Invalid question id");
-
-   const interview = new interviewModel.create({
-    question : questionAsked._id,
-    user : user._id,
-    audio_url : req.file.path
-   })
+    const interview = new interviewModel.create({
+      question: questionAsked._id,
+      user: user._id,
+      audio_url: req.file.path,
+    });
 
     processRecording({
       interview: interview._id,
-      recording_path : req.file.path,
-      question :  questionAsked.text
+      recording_path: req.file.path,
+      question: questionAsked.text,
     });
 
-    return res.status(200).json({ message: "success", file: req.file });
+    return res.status(200).json({
+      message: "success",
+      file: req.file,
+      interview: interview._id,
+    });
   }
 );
 
+router.post("/submit-feedback", (req, res, next) => {
+  // TODO : limit to independent services only
 
-router.post('/submit-feedback', (req,res,next) => {
-
- // TODO : limit to independent services only
-
-  const { interview , feedback } = req.body;
+  const { interview, feedback } = req.body;
 
   const interviewInstance = interviewModel.findById(interview);
 
-  if (!interviewInstance)
-    throw Error("Invalid interview id");
+  if (!interviewInstance) throw Error("Invalid interview id");
 
   interview.feedback = feedback;
 
   interview.save();
 
   return res.status(200).json({ message: "success" });
-})
+});
 
 module.exports = router;

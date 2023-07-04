@@ -1,12 +1,12 @@
 
-# from flask import escape
+from flask import escape
 
 import openai
 
 openai.api_key = ''
+trancript_app_id = ''
 
-
-background = """ 
+background = """
 
 You main task is to assist in candidates in interview preperation.
 You will not stray from this task.
@@ -27,36 +27,47 @@ def get_feedback(question , response):
 
 
 
-question = "Why do you want to work here?"
+test_question = "Why do you want to work here?"
 
-answer = "I am passionate about technlogy and I want to work for a company that is at the forefront of the industry."
+test_answer = "I am passionate about technlogy and I want to work for a company that is at the forefront of the industry."
 
 
-
-print(get_feedback(question , answer))
+# print(get_feedback(test_question , test_answer))
     
 
-# import functions_framework
+import functions_framework
 
-# @functions_framework.http
-# def hello_http(request):
-#     """HTTP Cloud Function.
-#     Args:
-#         request (flask.Request): The request object.
-#         <https://flask.palletsprojects.com/en/1.1.x/api/#incoming-request-data>
-#     Returns:
-#         The response text, or any set of values that can be turned into a
-#         Response object using `make_response`
-#         <https://flask.palletsprojects.com/en/1.1.x/api/#flask.make_response>.
-#     """
-#     request_json = request.get_json(silent=True)
-#     request_args = request.args
+@functions_framework.http
+def hello_http(request):
+    """HTTP Cloud Function.
+    Args:
+        request (flask.Request): The request object.
+        <https://flask.palletsprojects.com/en/1.1.x/api/#incoming-request-data>
+    Returns:
+        The response text, or any set of values that can be turned into a
+        Response object using `make_response`
+        <https://flask.palletsprojects.com/en/1.1.x/api/#flask.make_response>.
+    """
 
-#     if request_json and "name" in request_json:
-#         name = request_json["name"]
-#     elif request_args and "name" in request_args:
-#         name = request_args["name"]
-#     else:
-#         name = "World"
-#     return f"Hello {escape(name)}!"
+    request_json = request.get_json(silent=True)
+
+    if request.method is not 'POST':
+        return "Only POST requests are accepted", 405
+    
+    required_fields = ['question' , 'answer' , 'app_id']
+
+    for field in required_fields:
+        if field not in request_json:
+            return f"Missing field: {field}", 400
+
+    if request_json['app_id'] != trancript_app_id:
+        return "Invalid app id", 400
+    
+
+    question = request_json['question']
+    answer = request_json['answer']
+
+    feedback = get_feedback(question , answer)
+
+    return feedback , 200
 

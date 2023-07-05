@@ -1,10 +1,20 @@
 
 from flask import escape
 
+import os
+
 import openai
 
-openai.api_key = ''
-trancript_app_id = ''
+NOT_FOUND = 'Specified environment variable is not set.'
+
+openai_api_key = os.environ.get("OPEN_AI_API_KEY", NOT_FOUND)
+trancript_app_id = os.environ.get("TRANSCRIPT_APP_ID",NOT_FOUND)
+
+if NOT_FOUND in [openai_api_key , trancript_app_id]:
+    raise Exception("Environment variable not set")
+
+openai.api_key = openai_api_key
+    
 
 background = """
 
@@ -39,15 +49,11 @@ import functions_framework
 
 @functions_framework.http
 def hello_http(request):
-    """HTTP Cloud Function.
-    Args:
-        request (flask.Request): The request object.
-        <https://flask.palletsprojects.com/en/1.1.x/api/#incoming-request-data>
-    Returns:
-        The response text, or any set of values that can be turned into a
-        Response object using `make_response`
-        <https://flask.palletsprojects.com/en/1.1.x/api/#flask.make_response>.
-    """
+    content_type = request.headers["content-type"]
+
+    if not content_type == "application/json":
+        return "Only application/json requests are supported", 400
+    
 
     request_json = request.get_json(silent=True)
 

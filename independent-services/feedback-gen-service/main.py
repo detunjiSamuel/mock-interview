@@ -24,6 +24,8 @@ You would be given a question and candiate's answer.
 You are to respond with helpful feedback based on candiates answer
 that would help the candidate improve.
 
+You mush give feedback that is helpful and constructive.
+
 """
 
 
@@ -51,13 +53,13 @@ import functions_framework
 def hello_http(request):
     content_type = request.headers["content-type"]
 
-    if not content_type == "application/json":
+    if content_type != "application/json":
         return "Only application/json requests are supported", 400
     
 
     request_json = request.get_json(silent=True)
 
-    if request.method is not 'POST':
+    if request.method.upper() != 'POST':
         return "Only POST requests are accepted", 405
     
     required_fields = ['question' , 'answer' , 'app_id']

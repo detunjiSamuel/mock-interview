@@ -1,4 +1,5 @@
-import * as mongoose from 'mongoose';
+const mongoose = require("mongoose");
+
 
 const questionSchema = new mongoose.Schema({
   video_url: String,
@@ -8,6 +9,6 @@ const questionSchema = new mongoose.Schema({
   difficulty: Number,
 });
 
-const interviewModel = mongoose.model('Question', questionSchema);
+const questionModel = mongoose.model('Question', questionSchema);
 
-export default interviewModel;
+module.exports = questionModel;

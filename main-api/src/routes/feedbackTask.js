@@ -1,15 +1,14 @@
 const MAX_SCHEDULE_LIMIT = 30 * 60 * 60 * 24; // Represents 30 days in seconds.
 
 
-const projectId = "august-charter-391200";
 
 const createHttpTaskWithToken = async function (
-  project = projectId, // Your GCP Project id
-  queue = 'my-queue', // Name of your Queue
-  location = 'us-central1', // The GCP region of your queue
-  url = 'https://example.com/taskhandler', // The full url path that the request will be sent to
-  email = '<member>@<project-id>.iam.gserviceaccount.com', // Cloud IAM service account
-  payload = 'Hello, World!', // The task HTTP request body
+ payload, // The task HTTP request body 
+ project = process.env.PROJECT_ID, // Your GCP Project id
+  queue = process.env.QUEUE_NAME, // Name of your Queue
+  location = process.env.GCP_REGION, // The GCP region of your queue
+  url = process.env.TRANSCRIPT_APP_URL, // The full url path that the request will be sent to
+  email = process.env.SERVICE_ACCOUNT_EMAIL, // Cloud IAM service account
   date = new Date() // Intended date to schedule task
 ) {
   // Imports the Google Cloud Tasks library.
@@ -64,12 +63,17 @@ const createHttpTaskWithToken = async function (
 
   try {
     // Send create task request.
-    const [response] = await client.createTask({parent, task});
+    console.log("parent:" , parent)
+
+    const test_parent = process.env.QUEUE_PATH
+    const [response] = await client.createTask({parent : test_parent, task});
     console.log(`Created task ${response.name}`);
     return response.name;
   } catch (error) {
     // Construct error for Stackdriver Error Reporting
     console.error(Error(error.message));
+    console.log("GOOGLE_APPLICATION_CREDENTIALS", process.env.GOOGLE_APPLICATION_CREDENTIALS)
+    throw error;
   }
 };
 

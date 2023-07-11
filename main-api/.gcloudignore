@@ -1,5 +1,3 @@
 node_modules
 google-cloud-sdk
 target
-.env
-src/secret.json

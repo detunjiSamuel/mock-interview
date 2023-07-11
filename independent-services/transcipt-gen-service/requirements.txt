@@ -1,1 +1,5 @@
 google-cloud-speech == 2.20.0
+functions-framework==3.3.0
+flask==2.2.5
+google-cloud-error-reporting==1.9.1
+requests == 2.31.0

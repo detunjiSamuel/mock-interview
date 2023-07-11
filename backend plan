@@ -3,8 +3,14 @@
 Auth
  sign up 
  login
+ logout
+
+ 
+
 
 Questions
+
+
  get questions -> 
   /api/questions - paginatinated
   optional paramaters -> page , company  , tag , search
@@ -15,7 +21,7 @@ Questions
     return -> question , question title , Helpful tip
              tag compnay
 
-  respond to question -> 
+ respond to question -> 
    api/respond
      post ->
           audio file
@@ -31,5 +37,7 @@ Questions
       }
      ]
              
+
+
 
  

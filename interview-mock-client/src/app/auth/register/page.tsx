@@ -2,7 +2,7 @@
 import Err from '@/components/err/err';
 import Link from 'next/link'
 
-import { redirect, useParams, useSearchParams } from 'next/navigation'
+import { redirect, useRouter } from 'next/navigation'
 
 
 import { useState, useEffect } from 'react';
@@ -12,6 +12,9 @@ const MAIN_API_URL = 'http://localhost:8080'
 
 
 export default function Home() {
+
+ const router = useRouter()
+
 
  const [email, setEmail] = useState('');
  const [password, setPassword] = useState('');
@@ -68,20 +71,20 @@ export default function Home() {
 
    return
   }
+  
+   localStorage.setItem('token', userDetails.token)
+   localStorage.setItem('email', userDetails.email)
 
-  localStorage.setItem('token', userDetails.token)
-  localStorage.setItem('email', userDetails.email)
-
-  redirect('/')
+   router.push('/')
 
  };
 
  useEffect(() => {
   const token = localStorage.getItem('token');
   if (token) {
-    redirect('/');
+   redirect('/');
   }
-}, []);
+ }, []);
 
 
  return (

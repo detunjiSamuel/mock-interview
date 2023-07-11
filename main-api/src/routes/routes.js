@@ -57,20 +57,21 @@ const clientAuth =
   (enforce = false) =>
   async (req, res, next) => {
     const token = req.headers.authorization?.split(" ");
-
     if (!token && !enforce) {
       return next();
     }
 
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      req.body.user = await userModel.find({
-        email: decoded.email,
-      });
+      const decoded = jsonwebtoken.verify(token[1], process.env.JWT_SECRET);
+      const user = await userModel.findOne({
+       email: decoded.email,
+     });
+      req.user = user
       next();
     } catch (error) {
+     console.log(error)
       if (!enforce) next();
-      else return res.status(500).send("Invalid token");
+      else return res.status(500).json({ err: "Invalid token" });
     }
   };
 
@@ -80,7 +81,7 @@ const appAuth = (req, res, next) => {
   if (app_id === process.env.APP_ID) {
     next();
   } else {
-    return res.status(500).send("Invalid app_id");
+    return res.status(500).send({ err: "Invalid app_id" });
   }
 };
 
@@ -93,10 +94,12 @@ router.post(
   async (req, res, next) => {
     if (!req.file) throw new Error("No file uploaded");
 
-    const { question_id, user } = req.body;
+    const user = req.user
+
+    const { question_id} = req.body;
 
     const questionAsked = await questionModel.findOne({
-      title: question_id.toLowerCase(),
+      slug: question_id.toLowerCase(),
     });
 
     if (!questionAsked) throw new Error("Invalid question id");
@@ -104,14 +107,16 @@ router.post(
     const interview = await interviewModel.create({
       question: questionAsked._id,
       user: user._id,
-      audio_url: "gs://interview-project-bucket/" + req.file.filename,
+      audio_url: "gs://interview-project-bucket" + req.file.filename,
     });
 
     await processRecording({
       interview: interview._id,
       recording_path: interview.audio_url,
-      question: questionAsked.text,
+      question: questionAsked.text || 'Tell me about a time you disagreed with a supervisor or superior? How did you resolve the disagreement',
     });
+
+    
 
     return res.status(200).json({
       message: "success",
@@ -143,7 +148,7 @@ router.get("/questions/:slug", async (req, res, next) => {
   try {
     const { slug = "internal-test" } = req.params;
 
-    const question = await questionModel.findOne({ title: slug.toLowerCase() });
+    const question = await questionModel.findOne({ slug: slug.toLowerCase() });
 
     if (!question) throw new Error("Invalid question");
 
@@ -160,10 +165,10 @@ router.get(
     try {
       const { slug } = req.params;
 
-      const { user } = req.body;
+      const  user  = req.user;
 
       const question = await questionModel.findOne({
-        title: slug.toLowerCase(),
+        slug: slug.toLowerCase(),
       });
 
       if (!question) throw new Error("Invalid question");
@@ -182,7 +187,7 @@ router.get(
 
 router.get("/questions", clientAuth(false), async (req, res, next) => {
   try {
-    const { user } = req.body;
+   const  user  = req.user;
 
     const { page = 1, limit = 10 } = req.query;
 
@@ -220,7 +225,7 @@ router.get(
       // get specific interview feedback
 
       const { id } = req.params;
-      const { user } = req.body;
+      const  user  = req.user;
 
       if (mongoose.Types.ObjectId.isValid(id)) {
         const interview = await interviewModel.findById(
@@ -249,7 +254,7 @@ router.post("/auth/register", async (req, res, next) => {
 
     if (userExists) throw new Error("User already exists");
 
-    const hashedPassword = bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     await userModel.create({
       email,
@@ -286,6 +291,26 @@ router.post("/auth/login", async (req, res, next) => {
     });
 
     return res.status(200).json({ email, token });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/dev/add-questions", async (req, res, next) => {
+  try {
+    const { questions } = req.body;
+
+    for (let i = 0; i < questions.length; i++) {
+      const question = questions[i];
+
+      question.slug = question.topic.toLowerCase().split(" ").join("-");
+
+      await questionModel.create({
+        ...question,
+      });
+    }
+
+    return res.status(200).json({ message: "success" });
   } catch (error) {
     next(error);
   }

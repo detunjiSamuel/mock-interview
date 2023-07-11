@@ -7,4 +7,4 @@ Architecture -> https://googlecloudcheatsheet.withgoogle.com/architecture?link=3
 
 - interview-mock-client - nextjs app
 
-![alt text](https://github.com/detunjiSamuel/mock-interview/blob/main/img-proposed-architecture.png?raw=true)
+![alt text](https://github.com/detunjiSamuel/mock-interview/blob/main/comple-archi.png?raw=true)

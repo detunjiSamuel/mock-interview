@@ -7,18 +7,26 @@ import { AudioRecorder, useAudioRecorder } from 'react-audio-voice-recorder';
 
 import { useParams } from 'next/navigation'
 
-const MAIN_API_URL = 'https://august-charter-391200.uc.r.appspot.com'
+import SideElement from '../../components/sideElement/SideElement'
+
+import { MAIN_API_URL } from '@/app/AuthContext';
+
+
+const defualtQuestion = {
+ video_url: 'https://storage.googleapis.com/interview-project-bucket/timeDisagreement.mp4',
+ topic: 'FAILED TO LOAD QUESTION',
+ difficulty: '',
+ category: '',
+ text: '',
+ helpful_tip: ''
+}
 
 
 export default function Home() {
-
- const auth_token = localStorage.getItem('token')
-
-
+ const [question, setQuestion] = useState({ ...defualtQuestion })
  const params = useParams()
 
- console.log(params)
-
+ const auth_token = localStorage.getItem('token')
 
  const [audio, setAudio] = useState('');
 
@@ -53,7 +61,7 @@ export default function Home() {
    const formData = new FormData();
 
    formData.append('audio_response', recordingFile);
-   formData.append('question_id' , params.slug)
+   formData.append('question_id', params.slug)
 
    const auth_header = 'Bearer ' + auth_token
 
@@ -77,29 +85,49 @@ export default function Home() {
 
  }
 
+
  useEffect(() => {
   console.log("audio", audio);
  }, [audio]);
 
+
+ useEffect(() => {
+
+  const getQuestion = async () => {
+
+   const res = await fetch(MAIN_API_URL + '/api/questions/' + params.slug, {
+    cache: 'no-store',
+    headers: {
+     "Content-Type": "application/json",
+    }
+   })
+
+   if (res.ok) {
+    const data = await res.json()
+    setQuestion(data.question)
+   }
+
+  }
+
+  getQuestion()
+
+ }, []);
+
+
+
  return (
   <main className="flex flex-row min-h-screen p-2 pt-6">
-   <section className='basis-[40%] card'>
-    <div>
-     Video Prompter goes here
-    </div>
-    <div>
-     Title and difficulty goes here
-    </div>
-    <div>
-     tags go here
-    </div>
-    <div>
-     actual question goes here
-    </div>
-    <div>
-     helpful tips goes here
-    </div>
+   <section className='basis-[40%] card flex flex-col space-y-4'>
+    <SideElement
+     video_url={question.video_url}
+     title={question.topic}
+     difficulty={question.difficulty}
+     category={question.category}
+     question={question.text}
+     tip={question.helpful_tip}
+    />
    </section>
+
    <section className='basis-[60%] flex flex-col space-y-48'>
     <div className="flex flex-row justify-between capitalize text-sm ">
      <div className="underline hover:no-underline">

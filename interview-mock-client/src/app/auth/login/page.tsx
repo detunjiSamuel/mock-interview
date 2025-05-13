@@ -5,10 +5,10 @@ import Link from 'next/link'
 import { redirect, useRouter } from 'next/navigation'
 
 
-import { useState, useEffect } from 'react';
+import React , { useState, useEffect } from 'react';
 
 
-import { MAIN_API_URL, useAuth } from '@/app/AuthContext.tsx';
+import { MAIN_API_URL, useAuth } from '@/app/AuthContext';
 
 const defaultErr = {
  msg: undefined,
@@ -84,7 +84,7 @@ export default function Home() {
         Log in to your account
        </h2>
        <div className="font-mono text-xl font-bold text-gray-800 mb-6 text-center">
-        Don't have an account? <Link href="/auth/register" className='underline hover:no-underline'>Sign up</Link>
+        {"Don't have an account?"} <Link href="/auth/register" className='underline hover:no-underline'>Sign up</Link>
        </div>
 
        {

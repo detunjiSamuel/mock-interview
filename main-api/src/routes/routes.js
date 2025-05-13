@@ -15,41 +15,67 @@ const bcrypt = require("bcrypt");
 const jsonwebtoken = require("jsonwebtoken");
 const mongoose = require("mongoose");
 
-const createHttpTaskWithToken = require("./feedbackTask");
+const { sendToTranscriptService } = require("../services/rabbitMQ");
 
-const keyFilePath = path.join(__dirname, "..", "secret.json");
+//  ===  GCLOUD ( DEPRECARED )  STARTS HERE ==============
 
-const projectId = process.env.PROJECT_ID;
-const bucket = process.env.CLOUD_STORAGE_BUCKET;
+// const createHttpTaskWithToken = require("./feedbackTask");
 
-const uploadHandler = multer({
-  storage: multerGoogleStorage.storageEngine({
-    autoRetry: true,
-    bucket,
-    projectId,
-    keyFilename: keyFilePath,
-    filename: (req, file, cb) => {
-      cb(null, `/interview-responses/${Date.now()}_${file.originalname}`);
+// const keyFilePath = path.join(__dirname, "..", "secret.json");
+
+// const projectId = process.env.PROJECT_ID;
+// const bucket = process.env.CLOUD_STORAGE_BUCKET;
+
+// const uploadHandler = multer({
+//   storage: multerGoogleStorage.storageEngine({
+//     autoRetry: true,
+//     bucket,
+//     projectId,
+//     keyFilename: keyFilePath,
+//     filename: (req, file, cb) => {
+//       cb(null, `/interview-responses/${Date.now()}_${file.originalname}`);
+//     },
+//     acl: "publicRead",
+//   }),
+// });
+
+// async function processRecording({ interview, recording_path, question }) {
+//   /**
+//    *  Add to queue for processing
+//    *
+//    */
+
+//   const payload = {
+//     interview,
+//     recording_path,
+//     question,
+//   };
+//   console.log("adding to queue", payload);
+
+//   await createHttpTaskWithToken(payload);
+// }
+
+//  ===  GCLOUD ( DEPRECARED )  ENDS HERE ==============
+
+// TODO: include size limits and file type filters
+const uploadHandlerWithDisk = multer({
+  storage: multer.diskStorage({
+    destination: function (req, file, cb) {
+      const uploadPath =
+        process.env.FILE_STORAGE_PATH || path.join(__dirname, "../../storage");
+      cb(null, uploadPath);
     },
-    acl: "publicRead",
+    filename: function (req, file, cb) {
+      const uniqueSuffix =
+        Date.now() +
+        "-" +
+        Math.round(Math.random() * 1e9) +
+        "-" +
+        file.originalname;
+      cb(null, file.fieldname + "-" + uniqueSuffix);
+    },
   }),
 });
-
-async function processRecording({ interview, recording_path, question }) {
-  /**
-   *  Add to queue for processing
-   *
-   */
-
-  const payload = {
-    interview,
-    recording_path,
-    question,
-  };
-  console.log("adding to queue", payload);
-
-  await createHttpTaskWithToken(payload);
-}
 
 // Middleware
 
@@ -64,12 +90,13 @@ const clientAuth =
     try {
       const decoded = jsonwebtoken.verify(token[1], process.env.JWT_SECRET);
       const user = await userModel.findOne({
-       email: decoded.email,
-     });
-      req.user = user
+        email: decoded.email,
+      });
+      if ( user)
+       req.user = user;
       next();
     } catch (error) {
-     console.log(error)
+      console.log(error);
       if (!enforce) next();
       else return res.status(500).json({ err: "Invalid token" });
     }
@@ -90,39 +117,57 @@ const appAuth = (req, res, next) => {
 router.post(
   "/submit-recording",
   clientAuth(true),
-  uploadHandler.single("audio_response"),
+  uploadHandlerWithDisk.single("audio_response"),
   async (req, res, next) => {
-    if (!req.file) throw new Error("No file uploaded");
+    try {
+      if (!req.file) throw new Error("No file uploaded");
 
-    const user = req.user
+      const user = req.user;
 
-    const { question_id} = req.body;
+      const { question_id } = req.body;
 
-    const questionAsked = await questionModel.findOne({
-      slug: question_id.toLowerCase(),
-    });
+      const questionAsked = await questionModel.findOne({
+        slug: question_id.toLowerCase(),
+      });
 
-    if (!questionAsked) throw new Error("Invalid question id");
+      if (!questionAsked) throw new Error("Invalid question id");
 
-    const interview = await interviewModel.create({
-      question: questionAsked._id,
-      user: user._id,
-      audio_url: "gs://interview-project-bucket" + req.file.filename,
-    });
+      const interview = await interviewModel.create({
+        question: questionAsked._id,
+        user: user._id,
+        // audio_url: "gs://interview-project-bucket" + req.file.filename,
+        audio_url: req.file.filename,
+      });
 
-    await processRecording({
-      interview: interview._id,
-      recording_path: interview.audio_url,
-      question: questionAsked.text || 'Tell me about a time you disagreed with a supervisor or superior? How did you resolve the disagreement',
-    });
+      console.log(
+        "sendToTranscriptService",
+        interview._id.toString(),
+        interview.audio_url,
+        questionAsked.text
+      );
 
-    
+      sendToTranscriptService({
+        interview: interview._id.toString(),
+        recording_path: interview.audio_url,
+        question: questionAsked.text,
+      });
 
-    return res.status(200).json({
-      message: "success",
-      file: req.file,
-      interview: interview._id,
-    });
+      // await processRecording({
+      //   interview: interview._id,
+      //   recording_path: interview.audio_url,
+      //   question:
+      //     questionAsked.text ||
+      //     "Tell me about a time you disagreed with a supervisor or superior? How did you resolve the disagreement",
+      // });
+
+      return res.status(200).json({
+        message: "success",
+        file: req.file,
+        interview: interview._id,
+      });
+    } catch (error) {
+      next(error);
+    }
   }
 );
 
@@ -144,13 +189,14 @@ router.post("/submit-feedback", appAuth, async (req, res, next) => {
   }
 });
 
+// Get specific question
 router.get("/questions/:slug", async (req, res, next) => {
   try {
-    const { slug = "internal-test" } = req.params;
+    const { slug } = req.params;
 
     const question = await questionModel.findOne({ slug: slug.toLowerCase() });
 
-    if (!question) throw new Error("Invalid question");
+    if (!question) throw new Error("Question not found");
 
     return res.status(200).json({ question });
   } catch (error) {
@@ -158,6 +204,7 @@ router.get("/questions/:slug", async (req, res, next) => {
   }
 });
 
+// Get feedback for specific question
 router.get(
   "/questions/:slug/feedback",
   clientAuth(true),
@@ -165,7 +212,7 @@ router.get(
     try {
       const { slug } = req.params;
 
-      const  user  = req.user;
+      const user = req.user;
 
       const question = await questionModel.findOne({
         slug: slug.toLowerCase(),
@@ -187,31 +234,61 @@ router.get(
 
 router.get("/questions", clientAuth(false), async (req, res, next) => {
   try {
-   const  user  = req.user;
+    const user = req.user;
 
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 10, category, difficulty, search } = req.query;
 
-    const questions = await questionModel
-      .find({})
-      .skip((page - 1) * limit)
-      .limit(limit);
+    const query = {};
 
-    if (user && questions) {
-      for (let i = 0; i < questions.length; i++) {
-        const question = questions[i];
-
-        const interview = await interviewModel.findOne({
-          question: question._id,
-          user: user._id,
-        });
-
-        if (interview) {
-          question.status = true;
-        }
-      }
+    if (category) {
+      query.category = category;
     }
 
-    return res.status(200).json({ questions });
+    if (difficulty) {
+      query.difficulty = difficulty;
+    }
+    if (search) {
+      query.$or = [
+        { topic: { $regex: search, $options: "i" } },
+        { text: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const questions = await questionModel
+      .find(query)
+      .skip((parseInt(page) - 1) * limit)
+      .limit(parseInt(limit))
+      .sort({ topic: 1 });
+
+    const total = await questionModel.countDocuments(query);
+
+    if (user && questions.length > 0) {
+      const questionIds = questions.map((q) => q._id);
+      const interviews = await interviewModel.find({
+        question: { $in: questionIds },
+        user: user._id,
+      });
+
+      const questionStatusMap = {};
+      interviews.forEach((interview) => {
+        questionStatusMap[interview.question.toString()] = true;
+      });
+
+      // Add status to each question
+      questions.forEach((question) => {
+        question._doc.status = !!questionStatusMap[question._id.toString()];
+      });
+    }
+
+    return res.status(200).json({
+      questions,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / parseInt(limit)),
+      },
+    });
   } catch (error) {
     next(error);
   }
@@ -225,12 +302,12 @@ router.get(
       // get specific interview feedback
 
       const { id } = req.params;
-      const  user  = req.user;
+      const user = req.user;
 
       if (mongoose.Types.ObjectId.isValid(id)) {
-        const interview = await interviewModel.findById(
-          mongoose.Types.ObjectId(id)
-        );
+        const interview = await interviewModel
+          .findById(mongoose.Types.ObjectId(id))
+          .populate("question");
 
         if (!interview.user != user._id)
           throw new Error("Invalid interview id");
@@ -263,6 +340,7 @@ router.post("/auth/register", async (req, res, next) => {
 
     const token = jsonwebtoken.sign({ email }, process.env.JWT_SECRET, {
       algorithm: "HS256",
+      expiresIn: "2d",
     });
 
     return res.status(200).json({ email, token });
@@ -288,9 +366,27 @@ router.post("/auth/login", async (req, res, next) => {
 
     const token = jsonwebtoken.sign({ email }, process.env.JWT_SECRET, {
       algorithm: "HS256",
+      expiresIn: "2d",
     });
 
     return res.status(200).json({ email, token });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get user profile
+router.get("/auth/profile", clientAuth(true), async (req, res, next) => {
+  try {
+    const user = req.user;
+
+    // Don't send password
+    const userProfile = {
+      id: user._id,
+      email: user.email,
+    };
+
+    return res.status(200).json({ user: userProfile });
   } catch (error) {
     next(error);
   }

@@ -2,35 +2,61 @@ require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-const bodyParser = require('body-parser')
+const bodyParser = require("body-parser");
+const { setupRabbitMQ } = require("./src/services/rabbitMQ");
 const app = express();
 const router = require("./src/routes/routes");
 
-app.use(bodyParser.urlencoded({ extended: false }))
+app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(cors());
 
+// Health check endpoint
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+// Root endpoint
 app.get("/", (req, res) => {
-  res.send("Hello from App Engine!");
+  res.send("Interview Practice API is running!");
 });
 
 app.use("/api", router);
 
 app.use((err, req, res, next) => {
-  console.error(err);
-  return res.status(500).json({
-    msg: "internal error",
-    err : err.message,
+  console.error(`Error: ${err.message}`);
+  console.error(err.stack);
+
+  return res.status(err.status || 500).json({
+    msg: err.message || "internal error",
+    err:
+      process.env.NODE_ENV === "production" ? "An error occurred" : err.stack,
   });
 });
 
-// Listen to the App Engine-specified port, or 8080 otherwise
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, async () => {
-  await mongoose
-    .connect(process.env.MONGO_ATLAS_URI)
-    .then(() => console.log("DB Connected!"))
-    .catch((err) => console.log("DB error"));
+// Set up connection to MongoDB and RabbitMQ, then start the server
+async function startServer() {
+  try {
+    // Connect to MongoDB
+    await mongoose.connect(
+      process.env.MONGO_URI || "mongodb://localhost:27017/interview"
+    );
+    console.log("✅ MongoDB Connected!");
 
-  console.log(`Server listening on port ${PORT}...`);
-});
+    // Set up RabbitMQ connection
+    await setupRabbitMQ();
+    console.log("✅ RabbitMQ Connected!");
+
+    // Start the server
+    const PORT = process.env.PORT || 8080;
+    app.listen(PORT, () => {
+      console.log(`✅ Server listening on port ${PORT}...`);
+    });
+  } catch (error) {
+    console.error("❌ Server startup failed:", error);
+    process.exit(1);
+  }
+}
+
+// Start the server
+startServer();

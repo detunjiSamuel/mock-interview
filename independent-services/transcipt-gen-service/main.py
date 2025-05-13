@@ -8,96 +8,328 @@ import requests
 
 import os
 
-NOT_FOUND = 'Specified environment variable is not set.'
+import pika
+from threading import Thread
+import json
+import logging
+import time
 
-feedback_app_id = os.environ.get("FEEDBACK_APP_ID", NOT_FOUND)
-feedback_app_url = os.environ.get("FEEDBACK_APP_URL", NOT_FOUND)
+# NOT_FOUND = 'Specified environment variable is not set.'
 
-main_api_url = os.environ.get("MAIN_API_URL", NOT_FOUND)
-main_api_app_id = os.environ.get("MAIN_API_APP_ID", NOT_FOUND)
+# feedback_app_id = os.environ.get("FEEDBACK_APP_ID", NOT_FOUND)
+# feedback_app_url = os.environ.get("FEEDBACK_APP_URL", NOT_FOUND)
+
+# main_api_url = os.environ.get("MAIN_API_URL", NOT_FOUND)
+# main_api_app_id = os.environ.get("MAIN_API_APP_ID", NOT_FOUND)
 
 
-if NOT_FOUND in [feedback_app_id, feedback_app_url, main_api_url, main_api_app_id]:
-    raise Exception("Environment variable not set")
+# if NOT_FOUND in [feedback_app_id, feedback_app_url, main_api_url, main_api_app_id]:
+#     raise Exception("Environment variable not set")
 
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+
+RABBITMQ_URI = os.getenv('RABBITMQ_URI', 'amqp://guest:guest@localhost:5672/')
+MAIN_API_URL = os.getenv('MAIN_API_URL', 'http://localhost:8080')
+MAIN_API_APP_ID = os.getenv('MAIN_API_APP_ID', 'transcript_service')
+TRANSCRIPT_QUEUE = 'transcript_processing'
+FEEDBACK_QUEUE = 'feedback_processing'
+RESULTS_QUEUE = 'processing_results'
+
+
+connection = None
+channel = None
+
+
+def connect_to_rabbitmq():
+    """
+    Connect to RabbitMQ server and create channel
+    """
+    global connection, channel
+
+    # Parameters for connection retry
+    max_retries = 5
+    retry_delay = 5  # seconds
+
+    for attempt in range(max_retries):
+        try:
+            logger.info(
+                f"Connecting to RabbitMQ (attempt {attempt+1}/{max_retries})")
+            connection = pika.BlockingConnection(
+                pika.URLParameters(RABBITMQ_URI))
+            channel = connection.channel()
+
+            # Declare queues
+            channel.queue_declare(queue=TRANSCRIPT_QUEUE, durable=True)
+            channel.queue_declare(queue=FEEDBACK_QUEUE, durable=True)
+            channel.queue_declare(queue=RESULTS_QUEUE, durable=True)
+
+            logger.info("Successfully connected to RabbitMQ")
+            return True
+        except Exception as e:
+            logger.error(f"Error connecting to RabbitMQ: {e}")
+            if attempt < max_retries - 1:
+                logger.info(f"Retrying in {retry_delay} seconds...")
+                time.sleep(retry_delay)
+            else:
+                logger.error(
+                    "Max retries reached. Could not connect to RabbitMQ.")
+                return False
+
+
+# def transcribe_audio(audio_uri) -> speech.RecognizeResponse:
+#     # Instantiates a client
+#     client = speech.SpeechClient()
+
+#     audio = speech.RecognitionAudio(uri=audio_uri)
+
+#     config = speech.RecognitionConfig(
+#         encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
+#         sample_rate_hertz=48000,
+#         language_code="en-US",
+#     )
+
+#     # Detects speech in the audio file
+#     response = client.recognize(config=config, audio=audio)
+
+#     print("response returned ->" ,response.total_billed_time)
+
+#     results = response.results
+
+#     print("results ->", len(results))
+
+#     return response.results[0].alternatives[0].transcript
+
+
+def transcribe_audio(audio_uri):
+    """
+    Placeholder for audio transcription
+
+    This would be replaced with your actual transcription service.
+    For now, we'll return a dummy response.
+    """
+    logger.info(f"Transcribing audio: {audio_uri}")
+
+    # This is a placeholder - replace with actual transcription logic
+    # For example, using Google Cloud Speech-to-Text, Azure Cognitive Services, etc.
+
+    # Simulate processing time
+    time.sleep(2)
+
+    # Return dummy transcript
+    return "This is a dummy transcript for the audio file. Replace this with your actual audio transcription logic."
+
+
+
+def send_to_feedback_service(interview_id, transcript, question):
+    """
+    Send the transcript to the feedback service via RabbitMQ
+    """
+    try:
+        message = {
+            'interview': interview_id,
+            'transcript': transcript,
+            'question': question
+        }
         
-def transcribe_audio(audio_uri) -> speech.RecognizeResponse:
-    # Instantiates a client
-    client = speech.SpeechClient()
+        channel.basic_publish(
+            exchange='',
+            routing_key=FEEDBACK_QUEUE,
+            body=json.dumps(message),
+            properties=pika.BasicProperties(
+                delivery_mode=2,  # Make message persistent
+            )
+        )
+        logger.info(f"Sent transcript to feedback service for interview {interview_id}")
+        return True
+    except Exception as e:
+        logger.error(f"Error sending to feedback service: {e}")
+        return False
+    
+def send_result_to_main_api(interview_id, transcript):
+    """
+    Send the result back to the main API
+    """
+    try:
+        result = {
+            'type': 'transcript',
+            'interview': interview_id,
+            'answer': transcript,
+            'app_id': MAIN_API_APP_ID
+        }
+        
+        channel.basic_publish(
+            exchange='',
+            routing_key=RESULTS_QUEUE,
+            body=json.dumps(result),
+            properties=pika.BasicProperties(
+                delivery_mode=2,  # Make message persistent
+            )
+        )
+        logger.info(f"Sent result to main API for interview {interview_id}")
+        
+        # Also send directly to the API as a backup
+        try:
+            response = requests.post(
+                f"{MAIN_API_URL}/api/submit-feedback",
+                json=result,
+                headers={"Content-Type": "application/json"}
+            )
+            if response.status_code == 200:
+                logger.info(f"Successfully sent result directly to main API")
+            else:
+                logger.warning(f"Received non-200 response from main API: {response.status_code}")
+        except Exception as api_error:
+            logger.error(f"Error sending result directly to main API: {api_error}")
+        
+        return True
+    except Exception as e:
+        logger.error(f"Error sending result to main API: {e}")
+        return False
 
-    audio = speech.RecognitionAudio(uri=audio_uri)
 
-    config = speech.RecognitionConfig(
-        encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
-        sample_rate_hertz=48000,
-        language_code="en-US",
-    )
+# def get_feedback(question, response):
 
-    # Detects speech in the audio file
-    response = client.recognize(config=config, audio=audio)
+#     payload = {
+#         "question": question,
+#         "answer": response,
+#         "app_id": feedback_app_id
+#     }
 
-    print("response returned ->" ,response.total_billed_time)
+#     headers = {"Content-Type": "application/json"}
 
-    results = response.results
+#     r = requests.post(feedback_app_url,
+#                       json=payload, headers=headers)
 
-    print("results ->", len(results))
-
-    return response.results[0].alternatives[0].transcript
+#     return r.text
 
 
+# def report_to_main_api(interview, response, feedback):
+#     payload = {
+#         "interview": interview,
+#         "answer": response,
+#         "feedback": feedback,
+#         "app_id": main_api_app_id
+#     }
+
+#     r = requests.post(main_api_url,
+#                       json=payload)
 
 
+# @functions_framework.http
+# def hello_http(request):
 
-def get_feedback(question, response):
+#     request_json = request.get_json(silent=True)
 
-    payload = {
-        "question": question,
-        "answer": response,
-        "app_id": feedback_app_id
-    }
+#     print(request_json)
 
-    headers = {"Content-Type": "application/json"}
+#     required_fields = ['interview', 'recording_path', 'question']
 
-    r = requests.post(feedback_app_url,
-                      json=payload, headers=headers)
+#     for field in required_fields:
+#         if field not in request_json:
+#             return f"Missing field: {field}", 400
 
-    return r.text
+#     question = request_json['question']
+#     recording_path = request_json['recording_path']
+#     interview = request_json['interview']
 
+#     # convert audio to text , get feedback , send feedback to feedback app
 
-def report_to_main_api(interview, response, feedback):
-    payload = {
-        "interview": interview,
-        "answer": response,
-        "feedback": feedback,
-        "app_id": main_api_app_id
-    }
+#     transcript = transcribe_audio(recording_path)
+#     feedback = get_feedback(question, transcript)
 
-    r = requests.post(main_api_url,
-                      json=payload)
+#     report_to_main_api(interview, transcript, feedback)
+
+#     return 'success', 200
 
 
-@functions_framework.http
-def hello_http(request):
+def process_message(ch, method, properties, body):
+    """
+    Process a message from the transcript queue
+    """
+    try:
+        data = json.loads(body)
+        logger.info(f"Processing message: {data}")
+        
+        interview_id = data.get('interview')
+        recording_path = data.get('recording_path')
+        question = data.get('question')
+        
+        if not all([interview_id, recording_path, question]):
+            logger.error("Missing required fields in message")
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+            return
+        
+        # Transcribe the audio
+        transcript = transcribe_audio(recording_path)
+        
+        # Send the result back to the main API
+        send_result_to_main_api(interview_id, transcript)
+        
+        # Send to feedback service
+        send_to_feedback_service(interview_id, transcript, question)
+        
+        # Acknowledge the message
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+        logger.info(f"Processed message for interview {interview_id}")
+    except Exception as e:
+        logger.error(f"Error processing message: {e}")
+        # Acknowledge the message to prevent requeuing
+        # In production, you might want to implement a retry mechanism
+        ch.basic_ack(delivery_tag=method.delivery_tag)
 
-    request_json = request.get_json(silent=True)
+def start_consuming():
+    """
+    Start consuming messages from the transcript queue
+    """
+    try:
+        # Set prefetch count to 1 to ensure fair dispatch
+        channel.basic_qos(prefetch_count=1)
+        
+        # Set up consumer
+        channel.basic_consume(
+            queue=TRANSCRIPT_QUEUE,
+            on_message_callback=process_message
+        )
+        
+        logger.info("Starting to consume messages...")
+        channel.start_consuming()
+    except Exception as e:
+        logger.error(f"Error in consumer: {e}")
+        if connection and connection.is_open:
+            connection.close()
 
-    print(request_json)
+def main():
+    """
+    Main function to start the service
+    """
+    logger.info("Starting transcript service...")
+    
+    # Connect to RabbitMQ
+    if not connect_to_rabbitmq():
+        logger.error("Failed to connect to RabbitMQ. Exiting.")
+        return
+    
+    # Start consuming in a separate thread
+    consumer_thread = Thread(target=start_consuming)
+    consumer_thread.daemon = True
+    consumer_thread.start()
+    
+    try:
+        # Keep the main thread alive
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        logger.info("Received interrupt. Shutting down...")
+        if channel and channel.is_open:
+            channel.stop_consuming()
+        if connection and connection.is_open:
+            connection.close()
 
-    required_fields = ['interview', 'recording_path', 'question']
-
-    for field in required_fields:
-        if field not in request_json:
-            return f"Missing field: {field}", 400
-
-    question = request_json['question']
-    recording_path = request_json['recording_path']
-    interview = request_json['interview']
-
-    # convert audio to text , get feedback , send feedback to feedback app
-
-    transcript = transcribe_audio(recording_path)
-    feedback = get_feedback(question, transcript)
-
-    report_to_main_api(interview, transcript, feedback)
-
-    return 'success', 200
+if __name__ == "__main__":
+    main()

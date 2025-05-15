@@ -1,8 +1,4 @@
 
-import functions_framework
-from google.cloud import speech
-from flask import escape
-
 import requests
 
 
@@ -14,17 +10,6 @@ import json
 import logging
 import time
 
-# NOT_FOUND = 'Specified environment variable is not set.'
-
-# feedback_app_id = os.environ.get("FEEDBACK_APP_ID", NOT_FOUND)
-# feedback_app_url = os.environ.get("FEEDBACK_APP_URL", NOT_FOUND)
-
-# main_api_url = os.environ.get("MAIN_API_URL", NOT_FOUND)
-# main_api_app_id = os.environ.get("MAIN_API_APP_ID", NOT_FOUND)
-
-
-# if NOT_FOUND in [feedback_app_id, feedback_app_url, main_api_url, main_api_app_id]:
-#     raise Exception("Environment variable not set")
 
 
 logging.basicConfig(
@@ -82,30 +67,6 @@ def connect_to_rabbitmq():
                 return False
 
 
-# def transcribe_audio(audio_uri) -> speech.RecognizeResponse:
-#     # Instantiates a client
-#     client = speech.SpeechClient()
-
-#     audio = speech.RecognitionAudio(uri=audio_uri)
-
-#     config = speech.RecognitionConfig(
-#         encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
-#         sample_rate_hertz=48000,
-#         language_code="en-US",
-#     )
-
-#     # Detects speech in the audio file
-#     response = client.recognize(config=config, audio=audio)
-
-#     print("response returned ->" ,response.total_billed_time)
-
-#     results = response.results
-
-#     print("results ->", len(results))
-
-#     return response.results[0].alternatives[0].transcript
-
-
 def transcribe_audio(audio_uri):
     """
     Placeholder for audio transcription
@@ -122,7 +83,7 @@ def transcribe_audio(audio_uri):
     time.sleep(2)
 
     # Return dummy transcript
-    return "This is a dummy transcript for the audio file. Replace this with your actual audio transcription logic."
+    return "Money is the major motivation for me  , i don't really have any passion for the work you do here."
 
 
 
@@ -151,7 +112,27 @@ def send_to_feedback_service(interview_id, transcript, question):
         logger.error(f"Error sending to feedback service: {e}")
         return False
     
-def send_result_to_main_api(interview_id, transcript):
+
+
+def fallback_send_result_to_main_api(result):
+     """
+     Fallback - use regular API call instead of use queues
+     """
+     try:
+         response = requests.post(
+         f"{MAIN_API_URL}/api/submit-feedback",
+         json=result,
+         headers={"Content-Type": "application/json"} #TODO: add the app ID in headers
+     )
+         if response.status_code == 200:
+             logger.info(f"Successfully sent result directly to main API")
+         else:
+             logger.warning(f"Received non-200 response from main API: {response.status_code}")
+     except Exception as api_error:
+         logger.error(f"Error sending result directly to main API: {api_error}")
+    
+
+def send_result_to_main_api(interview_id, transcript , question):
     """
     Send the result back to the main API
     """
@@ -159,8 +140,10 @@ def send_result_to_main_api(interview_id, transcript):
         result = {
             'type': 'transcript',
             'interview': interview_id,
-            'answer': transcript,
-            'app_id': MAIN_API_APP_ID
+            'transcript': transcript,
+            'app_id': MAIN_API_APP_ID,
+            'question': question
+
         }
         
         channel.basic_publish(
@@ -171,81 +154,12 @@ def send_result_to_main_api(interview_id, transcript):
                 delivery_mode=2,  # Make message persistent
             )
         )
-        logger.info(f"Sent result to main API for interview {interview_id}")
-        
-        # Also send directly to the API as a backup
-        try:
-            response = requests.post(
-                f"{MAIN_API_URL}/api/submit-feedback",
-                json=result,
-                headers={"Content-Type": "application/json"}
-            )
-            if response.status_code == 200:
-                logger.info(f"Successfully sent result directly to main API")
-            else:
-                logger.warning(f"Received non-200 response from main API: {response.status_code}")
-        except Exception as api_error:
-            logger.error(f"Error sending result directly to main API: {api_error}")
-        
+        logger.info(f"Sent result to main API for interview {interview_id}")        
         return True
     except Exception as e:
         logger.error(f"Error sending result to main API: {e}")
+        fallback_send_result_to_main_api(result)
         return False
-
-
-# def get_feedback(question, response):
-
-#     payload = {
-#         "question": question,
-#         "answer": response,
-#         "app_id": feedback_app_id
-#     }
-
-#     headers = {"Content-Type": "application/json"}
-
-#     r = requests.post(feedback_app_url,
-#                       json=payload, headers=headers)
-
-#     return r.text
-
-
-# def report_to_main_api(interview, response, feedback):
-#     payload = {
-#         "interview": interview,
-#         "answer": response,
-#         "feedback": feedback,
-#         "app_id": main_api_app_id
-#     }
-
-#     r = requests.post(main_api_url,
-#                       json=payload)
-
-
-# @functions_framework.http
-# def hello_http(request):
-
-#     request_json = request.get_json(silent=True)
-
-#     print(request_json)
-
-#     required_fields = ['interview', 'recording_path', 'question']
-
-#     for field in required_fields:
-#         if field not in request_json:
-#             return f"Missing field: {field}", 400
-
-#     question = request_json['question']
-#     recording_path = request_json['recording_path']
-#     interview = request_json['interview']
-
-#     # convert audio to text , get feedback , send feedback to feedback app
-
-#     transcript = transcribe_audio(recording_path)
-#     feedback = get_feedback(question, transcript)
-
-#     report_to_main_api(interview, transcript, feedback)
-
-#     return 'success', 200
 
 
 def process_message(ch, method, properties, body):
@@ -269,7 +183,7 @@ def process_message(ch, method, properties, body):
         transcript = transcribe_audio(recording_path)
         
         # Send the result back to the main API
-        send_result_to_main_api(interview_id, transcript)
+        send_result_to_main_api(interview_id, transcript , question)
         
         # Send to feedback service
         send_to_feedback_service(interview_id, transcript, question)

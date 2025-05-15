@@ -5,7 +5,6 @@ const questionModel = require("../models/question");
 const userModel = require("../models/user");
 
 const multer = require("multer");
-const multerGoogleStorage = require("multer-google-storage");
 
 const router = express.Router();
 
@@ -16,46 +15,6 @@ const jsonwebtoken = require("jsonwebtoken");
 const mongoose = require("mongoose");
 
 const { sendToTranscriptService } = require("../services/rabbitMQ");
-
-//  ===  GCLOUD ( DEPRECARED )  STARTS HERE ==============
-
-// const createHttpTaskWithToken = require("./feedbackTask");
-
-// const keyFilePath = path.join(__dirname, "..", "secret.json");
-
-// const projectId = process.env.PROJECT_ID;
-// const bucket = process.env.CLOUD_STORAGE_BUCKET;
-
-// const uploadHandler = multer({
-//   storage: multerGoogleStorage.storageEngine({
-//     autoRetry: true,
-//     bucket,
-//     projectId,
-//     keyFilename: keyFilePath,
-//     filename: (req, file, cb) => {
-//       cb(null, `/interview-responses/${Date.now()}_${file.originalname}`);
-//     },
-//     acl: "publicRead",
-//   }),
-// });
-
-// async function processRecording({ interview, recording_path, question }) {
-//   /**
-//    *  Add to queue for processing
-//    *
-//    */
-
-//   const payload = {
-//     interview,
-//     recording_path,
-//     question,
-//   };
-//   console.log("adding to queue", payload);
-
-//   await createHttpTaskWithToken(payload);
-// }
-
-//  ===  GCLOUD ( DEPRECARED )  ENDS HERE ==============
 
 // TODO: include size limits and file type filters
 const uploadHandlerWithDisk = multer({
@@ -152,18 +111,10 @@ router.post(
         question: questionAsked.text,
       });
 
-      // await processRecording({
-      //   interview: interview._id,
-      //   recording_path: interview.audio_url,
-      //   question:
-      //     questionAsked.text ||
-      //     "Tell me about a time you disagreed with a supervisor or superior? How did you resolve the disagreement",
-      // });
-
       return res.status(200).json({
         message: "success",
         file: req.file,
-        interview: interview._id,
+        interview: interview._id.toString(),
       });
     } catch (error) {
       next(error);
@@ -299,18 +250,18 @@ router.get(
   clientAuth(true),
   async (req, res, next) => {
     try {
-      // get specific interview feedback
+      // get specific interview feedback for polling
 
       const { id } = req.params;
       const user = req.user;
 
       if (mongoose.Types.ObjectId.isValid(id)) {
         const interview = await interviewModel
-          .findById(mongoose.Types.ObjectId(id))
+          .findById(new mongoose.Types.ObjectId(id))
           .populate("question");
-
-        if (!interview.user != user._id)
-          throw new Error("Invalid interview id");
+        
+        if (interview.user.toString() != user._id.toString())
+          throw new Error("Interview does not belong to user");
 
         return res.status(200).json({ interview });
       }

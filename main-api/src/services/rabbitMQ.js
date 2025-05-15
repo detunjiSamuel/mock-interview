@@ -1,4 +1,5 @@
 const amqp = require('amqplib');
+const mongoose = require("mongoose")
 
 // Connection variables
 let connection = null;
@@ -89,7 +90,7 @@ async function processTranscriptResult(result) {
   
   // Update the interview record with the transcript
   const InterviewModel = require('../models/interview');
-  await InterviewModel.findByIdAndUpdate(interview, {
+  await InterviewModel.findByIdAndUpdate(new mongoose.Types.ObjectId(interview), {
     audio_transcript: transcript
   });
   
@@ -106,7 +107,7 @@ async function processFeedbackResult(result) {
   
   // Update the interview record with the feedback
   const InterviewModel = require('../models/interview');
-  await InterviewModel.findByIdAndUpdate(interview, {
+  await InterviewModel.findByIdAndUpdate(new mongoose.Types.ObjectId(interview), {
     feedback: feedback
   });
 }

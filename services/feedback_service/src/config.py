@@ -10,7 +10,7 @@ MAIN_API_APP_ID = os.getenv('MAIN_API_APP_ID', 'transcript_service')
 
 TRANSCRIPT_QUEUE = 'transcript_processing'
 FEEDBACK_QUEUE = 'feedback_processing'
-RESULTS_QUEUE = 'processing_results'
+RESULTS_QUEUE = 'results_to_main_api'
 
 
 MAX_RETRIES = 5

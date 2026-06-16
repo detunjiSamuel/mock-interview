@@ -9,7 +9,7 @@ let channel = null;
 const QUEUES = {
   TRANSCRIPT: 'transcript_processing',
   FEEDBACK: 'feedback_processing',
-  RESULTS: 'processing_results'
+  RESULTS: 'results_to_main_api'
 };
 
 /**

@@ -3,3 +3,4 @@
 secret.json
 service-account.json
 devhelper
+.venv/

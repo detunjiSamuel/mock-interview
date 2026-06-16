@@ -1,1 +1,30 @@
-.venv
+# Python
+.venv/
+__pycache__/
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+*.pyc
+*.pyo
+
+# uv lockfile is COMMITTED — do not ignore uv.lock
+# .python-version is COMMITTED — do not ignore
+
+# Node.js
+node_modules/
+.next/
+dist/
+build/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

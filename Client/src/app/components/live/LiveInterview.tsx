@@ -242,7 +242,14 @@ export default function LiveInterview({ questionSlug }: LiveInterviewProps) {
         }
 
         case "error": {
-          setErrorMsg((msg.detail as string) ?? "An error occurred during the session.");
+          // msg.detail comes from our own proxy; msg.error.message comes from
+          // OpenAI's Realtime API error events forwarded as-is.
+          const oeError = msg.error as { message?: string } | undefined;
+          const detail =
+            (msg.detail as string | undefined) ??
+            oeError?.message ??
+            "An error occurred during the session.";
+          setErrorMsg(detail);
           break;
         }
       }

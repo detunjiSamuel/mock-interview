@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import json
 import logging
 
@@ -63,6 +64,7 @@ async def run_proxy_session(
     accumulated: list[SessionMessage] = []
     headers = {
         "Authorization": f"Bearer {openai_api_key}",
+        "OpenAI-Beta": "realtime=v1",
     }
 
     try:
@@ -84,15 +86,31 @@ async def run_proxy_session(
             async def browser_to_openai() -> None:
                 try:
                     while True:
-                        data = await websocket.receive_text()
-                        try:
-                            msg = json.loads(data)
-                        except json.JSONDecodeError:
-                            await openai_ws.send(data)
-                            continue
-                        if msg.get("type") == "end_session":
+                        raw = await websocket.receive()
+                        if raw["type"] == "websocket.disconnect":
                             return
-                        await openai_ws.send(data)
+                        if raw.get("bytes"):
+                            # Binary audio chunk from browser: convert to base64 and
+                            # wrap in the format OpenAI Realtime API expects.
+                            audio_b64 = base64.b64encode(raw["bytes"]).decode()
+                            await openai_ws.send(
+                                json.dumps(
+                                    {
+                                        "type": "input_audio_buffer.append",
+                                        "audio": audio_b64,
+                                    }
+                                )
+                            )
+                        elif raw.get("text"):
+                            text = raw["text"]
+                            try:
+                                msg = json.loads(text)
+                            except json.JSONDecodeError:
+                                await openai_ws.send(text)
+                                continue
+                            if msg.get("type") == "end_session":
+                                return
+                            await openai_ws.send(text)
                 except WebSocketDisconnect:
                     return
                 except Exception as exc:

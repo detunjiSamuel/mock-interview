@@ -1,6 +1,15 @@
 
 
-const SideElement = ({ video_url, title, difficulty, category, question, tip }) => {
+interface SideElementProps {
+  video_url?: string;
+  title?: string;
+  difficulty?: string;
+  category?: string;
+  question?: string;
+  tip?: string;
+}
+
+const SideElement = ({ video_url, title, difficulty, category, question, tip }: SideElementProps) => {
  return (
   <>
    <div>

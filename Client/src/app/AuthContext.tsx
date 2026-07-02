@@ -1,9 +1,6 @@
-
-import React, { createContext, useState, useContext ,  ReactNode , useEffect } from 'react';
-
-
-const MAIN_API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-
+"use client";
+import React, { createContext, useState, useContext, ReactNode, useEffect } from "react";
+import { apiClient } from "@/lib/api-client";
 
 interface User {
   email: string;
@@ -14,58 +11,58 @@ interface AuthContextType {
   isLoggedIn: boolean;
   user: User | null;
   token: string | null;
-  login: (token: string, email: string) => void;
-  logout: () => void;
+  login: (token: string, email: string) => Promise<void>;
+  logout: () => Promise<void>;
   isLoading: boolean;
 }
 
-
-const initialAuthContext: AuthContextType = {
+const AuthContext = createContext<AuthContextType>({
   isLoggedIn: false,
   user: null,
   token: null,
-  login: () => {},
-  logout: () => {},
+  login: async () => {},
+  logout: async () => {},
   isLoading: true,
-};
+});
 
-const AuthContext = createContext<AuthContextType>(initialAuthContext);
-
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Initialize auth state from localStorage on mount
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedEmail = localStorage.getItem('email');
-    
-    if (storedToken && storedEmail) {
-      setToken(storedToken);
-      setUser({ email: storedEmail });
-      setIsLoggedIn(true);
-    }
-    
-    setIsLoading(false);
+    (async () => {
+      try {
+        const sessionRes = await fetch("/api/auth/session").then((r) => r.json());
+        const sessionToken: string | null = sessionRes.token ?? null;
+        if (sessionToken) {
+          const profile = await apiClient.get("/api/auth/profile");
+          setToken(sessionToken);
+          setUser({ email: profile.data.email, id: profile.data.id });
+          setIsLoggedIn(true);
+        }
+      } catch {
+        // no valid session
+      } finally {
+        setIsLoading(false);
+      }
+    })();
   }, []);
 
-  const login = (token: string, email: string) => {
-    localStorage.setItem('token', token);
-    localStorage.setItem('email', email);
-    setToken(token);
+  const login = async (newToken: string, email: string) => {
+    await fetch("/api/auth/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: newToken }),
+    });
+    setToken(newToken);
     setUser({ email });
     setIsLoggedIn(true);
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('email');
+  const logout = async () => {
+    await fetch("/api/auth/session", { method: "DELETE" });
     setToken(null);
     setUser(null);
     setIsLoggedIn(false);
@@ -76,14 +73,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
-};
+}
 
-export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
-
-export { MAIN_API_URL };
+export function useAuth(): AuthContextType {
+  return useContext(AuthContext);
+}

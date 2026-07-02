@@ -11,6 +11,7 @@ from websockets.asyncio.client import connect as ws_connect
 from mock_interview_shared.schemas.enums import SessionStatus
 from mock_interview_shared.schemas.messages import FeedbackRequest
 
+from ..models.interview import Interview
 from ..models.question import Question
 from ..models.session import InterviewSession, SessionMessage
 
@@ -30,14 +31,14 @@ _SYSTEM_PROMPT = (
 
 async def _publish_feedback(
     mq_connection: AbstractRobustConnection,
-    session: InterviewSession,
+    interview_id: str,
     question: Question,
     transcript: str,
 ) -> None:
     channel = await mq_connection.channel()
     try:
         request = FeedbackRequest(
-            interview=str(session.id),
+            interview=interview_id,
             transcript=transcript,
             question=question.text,
             difficulty=question.difficulty,
@@ -57,6 +58,7 @@ async def _publish_feedback(
 async def run_proxy_session(
     websocket: WebSocket,
     session: InterviewSession,
+    interview: Interview,
     question: Question,
     openai_api_key: str,
     mq_connection: AbstractRobustConnection,
@@ -171,6 +173,6 @@ async def run_proxy_session(
     if accumulated:
         transcript = "\n".join(f"{m.role}: {m.content}" for m in accumulated)
         try:
-            await _publish_feedback(mq_connection, session, question, transcript)
+            await _publish_feedback(mq_connection, str(interview.id), question, transcript)
         except Exception as exc:
             logger.error("Failed to publish feedback request: %s", exc)

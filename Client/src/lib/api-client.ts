@@ -20,8 +20,9 @@ apiClient.interceptors.response.use(
       typeof window !== "undefined" &&
       !window.location.pathname.startsWith("/auth/")
     ) {
-      document.cookie = "token=; Max-Age=0; path=/";
-      window.location.href = "/auth/login";
+      fetch("/api/auth/session", { method: "DELETE" }).finally(() => {
+        window.location.href = "/auth/login";
+      });
     }
     return Promise.reject(err);
   }

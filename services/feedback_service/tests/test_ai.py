@@ -30,7 +30,9 @@ async def test_generate_feedback_returns_score() -> None:
     mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
     with patch("app.services.ai.AsyncOpenAI", return_value=mock_client):
-        result = await generate_feedback("What is polymorphism?", "It means multiple forms...", "fake-key")
+        result = await generate_feedback(
+            "What is polymorphism?", "It means multiple forms...", "fake-key"
+        )
 
     assert isinstance(result, FeedbackScore)
     assert result.score == 7

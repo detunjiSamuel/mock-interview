@@ -15,7 +15,6 @@ from mock_interview_shared.schemas.enums import Category, Difficulty, SessionSta
 
 from tests.conftest import _patched_load_cached_info
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
@@ -175,9 +174,7 @@ async def test_live_interview_question_not_found(ws_app) -> None:
     user = await _seed_user("qnotfound@example.com")
     token = _make_token(user.email)
 
-    with client.websocket_connect(
-        f"/api/interviews/live/no-such-slug?token={token}"
-    ) as ws:
+    with client.websocket_connect(f"/api/interviews/live/no-such-slug?token={token}") as ws:
         error_msg = ws.receive_json()
         assert error_msg["type"] == "error"
         assert "not found" in error_msg["detail"].lower()
@@ -202,9 +199,7 @@ async def test_live_interview_session_created(ws_app) -> None:
         patch("app.services.realtime_proxy.ws_connect", _fake_ws_connect),
         patch("app.services.realtime_proxy._publish_feedback", new=AsyncMock()),
     ):
-        with client.websocket_connect(
-            f"/api/interviews/live/session-q?token={token}"
-        ) as ws:
+        with client.websocket_connect(f"/api/interviews/live/session-q?token={token}") as ws:
             # First frame: session acknowledged
             first = ws.receive_json()
             assert first["type"] == "session_created"
@@ -237,9 +232,7 @@ async def test_live_interview_openai_failure(ws_app) -> None:
     token = _make_token(user.email)
 
     with patch("app.services.realtime_proxy.ws_connect", _failing_ws_connect):
-        with client.websocket_connect(
-            f"/api/interviews/live/failure-q?token={token}"
-        ) as ws:
+        with client.websocket_connect(f"/api/interviews/live/failure-q?token={token}") as ws:
             # Session is created before the proxy attempt
             first = ws.receive_json()
             assert first["type"] == "session_created"

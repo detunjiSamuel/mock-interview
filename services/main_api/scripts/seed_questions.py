@@ -19,12 +19,12 @@ _datasheet = _repo_root / "data-sheet" / "QUESTIONS DATASHEET - 1.xlsx"
 # Ensure the app package is importable when run as a script
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import beanie
-from motor.motor_asyncio import AsyncIOMotorClient
+import beanie  # noqa: E402
+from motor.motor_asyncio import AsyncIOMotorClient  # noqa: E402
 
-from app.config import settings
-from app.models.question import Question
-from mock_interview_shared.schemas.enums import Category, Difficulty
+from app.config import settings  # noqa: E402
+from app.models.question import Question  # noqa: E402
+from mock_interview_shared.schemas.enums import Category, Difficulty  # noqa: E402
 
 
 def _slug(text: str, suffix: str = "") -> str:
@@ -116,7 +116,6 @@ async def main() -> None:
     print(f"\nLoaded {len(rows)} question(s) from datasheet\n")
 
     upserted = 0
-    skipped = 0
     for row in rows:
         slug = row["slug"]
         existing = await Question.find_one(Question.slug == slug)

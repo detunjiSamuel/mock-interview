@@ -50,7 +50,7 @@ async def test_submit_recording_requires_auth(async_client: AsyncClient) -> None
 
 async def test_submit_recording_creates_interview(async_client: AsyncClient) -> None:
     user = await _seed_user("submit@example.com")
-    question = await _seed_question("submit-q")
+    await _seed_question("submit-q")
 
     with patch(
         "app.routers.interviews._file_storage.save",

@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Uplo
 from fastapi.responses import StreamingResponse
 
 from ..config import settings
-from ..dependencies import ConnectionManager, get_current_user, get_mq_channel, manager
+from ..dependencies import get_current_user, get_mq_channel, manager
 from ..models.interview import Interview
 from ..models.question import Question
 from ..models.user import User
@@ -77,9 +77,7 @@ async def get_interview_feedback(
 
     # Ensure user owns this interview
     interview_user_id = (
-        str(interview.user.id)
-        if hasattr(interview.user, "id")
-        else str(interview.user)
+        str(interview.user.id) if hasattr(interview.user, "id") else str(interview.user)
     )
     if interview_user_id != str(current_user.id):
         raise HTTPException(

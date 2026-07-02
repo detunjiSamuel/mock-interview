@@ -15,7 +15,7 @@ from ..models.session import InterviewSession, SessionMessage
 
 logger = logging.getLogger(__name__)
 
-_OPENAI_URL = "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01"
+_OPENAI_URL = "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview"
 
 _SYSTEM_PROMPT = (
     "You are a professional technical interviewer conducting a mock interview.\n"
@@ -63,7 +63,6 @@ async def run_proxy_session(
     accumulated: list[SessionMessage] = []
     headers = {
         "Authorization": f"Bearer {openai_api_key}",
-        "OpenAI-Beta": "realtime=v1",
     }
 
     try:

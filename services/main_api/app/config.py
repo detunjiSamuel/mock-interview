@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     file_storage_path: str = "./storage"
     internal_api_secret: str  # no default — must be set via env or .env file
     openai_api_key: str  # no default — must be set via env or .env file
+    cors_origins: list[str] = ["http://localhost:3000", "http://localhost:3001"]
     port: int = 8000
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

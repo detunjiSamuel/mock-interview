@@ -1,25 +1,25 @@
 import axios from "axios";
 
 export const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000",
+  baseURL: "/backend",
 });
 
-function getTokenFromCookie(): string | null {
-  if (typeof document === "undefined") return null;
-  const match = document.cookie.match(/(?:^|; )token=([^;]*)/);
-  return match ? decodeURIComponent(match[1]) : null;
+export function setApiToken(token: string | null) {
+  if (token) {
+    apiClient.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+  } else {
+    delete apiClient.defaults.headers.common["Authorization"];
+  }
 }
-
-apiClient.interceptors.request.use((config) => {
-  const token = getTokenFromCookie();
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
 
 apiClient.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401 && typeof window !== "undefined") {
+    if (
+      err.response?.status === 401 &&
+      typeof window !== "undefined" &&
+      !window.location.pathname.startsWith("/auth/")
+    ) {
       document.cookie = "token=; Max-Age=0; path=/";
       window.location.href = "/auth/login";
     }

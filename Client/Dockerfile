@@ -15,7 +15,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Environment variables must be present at build time
-ENV NEXT_PUBLIC_API_URL=http://localhost:8080
+ARG NEXT_PUBLIC_API_URL=http://localhost:8000
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 # Build application
 RUN npm run build

@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     jwt_expire_days: int = 2
     file_storage_path: str = "./storage"
     internal_api_secret: str  # no default — must be set via env or .env file
+    openai_api_key: str  # no default — must be set via env or .env file
     port: int = 8000
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

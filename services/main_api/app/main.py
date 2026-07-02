@@ -12,8 +12,9 @@ from .config import settings
 from .logging_config import CorrelationIDMiddleware, configure_logging
 from .models.interview import Interview
 from .models.question import Question
+from .models.session import InterviewSession
 from .models.user import User
-from .routers import auth, internal, interviews, questions
+from .routers import auth, internal, interviews, questions, realtime
 
 configure_logging()
 
@@ -25,7 +26,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     db_name = settings.mongo_uri.rsplit("/", 1)[-1].split("?")[0]
     await beanie.init_beanie(
         database=motor_client[db_name],
-        document_models=[User, Question, Interview],
+        document_models=[User, Question, Interview, InterviewSession],
     )
 
     mq_connection = await get_connection(settings.rabbitmq_uri)
@@ -58,6 +59,7 @@ app.include_router(auth.router, prefix="/api")
 app.include_router(questions.router, prefix="/api")
 app.include_router(interviews.router, prefix="/api")
 app.include_router(internal.router, prefix="/api")
+app.include_router(realtime.router, prefix="/api")
 
 
 @app.get("/health", tags=["health"])

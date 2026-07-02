@@ -1,3 +1,4 @@
+# ruff: noqa: E402
 import os
 
 os.environ.setdefault("JWT_SECRET", "test-secret-key-for-pytest")
@@ -16,7 +17,7 @@ _bcrypt.hashpw = lambda pwd, salt: _orig_hashpw(pwd[:72], salt)
 # mongomock-motor's AsyncMongoMockCollection.aggregate() returns the cursor directly
 # but Beanie (fetch_links=True path) does `await collection.aggregate(...)`.
 # In real motor, aggregate() is awaitable. Make it async here so Beanie can await it.
-from mongomock_motor import AsyncMongoMockCollection as _AsyncMongoMockCollection  # noqa: E402
+from mongomock_motor import AsyncMongoMockCollection as _AsyncMongoMockCollection
 
 _orig_aggregate = _AsyncMongoMockCollection.aggregate
 
@@ -30,8 +31,8 @@ _AsyncMongoMockCollection.aggregate = _async_aggregate  # type: ignore[method-as
 # mongomock's get_value_by_dot cannot navigate into bson.DBRef objects.
 # Beanie stores Link fields as DBRef and its $lookup pipeline uses "field.$id" as
 # localField. Without this patch, the lookup returns no rows and link fetching fails.
-from bson import DBRef as _DBRef  # noqa: E402
-import mongomock.helpers as _mmh  # noqa: E402
+from bson import DBRef as _DBRef
+import mongomock.helpers as _mmh
 
 _orig_gvbd = _mmh.get_value_by_dot
 
@@ -54,10 +55,10 @@ def _dbref_aware_gvbd(doc, key, can_generate_array=False):
 
 _mmh.get_value_by_dot = _dbref_aware_gvbd
 
-import pytest_asyncio  # noqa: E402
-from unittest.mock import AsyncMock, patch  # noqa: E402
-from mongomock_motor import AsyncMongoMockClient  # noqa: E402
-from httpx import AsyncClient, ASGITransport  # noqa: E402
+import pytest_asyncio
+from unittest.mock import AsyncMock, patch
+from mongomock_motor import AsyncMongoMockClient
+from httpx import AsyncClient, ASGITransport
 
 
 async def _patched_load_cached_info(self) -> None:

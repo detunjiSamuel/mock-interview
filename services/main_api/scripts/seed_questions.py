@@ -6,11 +6,11 @@ from pathlib import Path
 # Ensure the app package is importable when run as a script
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import beanie  # noqa: E402
-from motor.motor_asyncio import AsyncIOMotorClient  # noqa: E402
+import beanie
+from motor.motor_asyncio import AsyncIOMotorClient
 
-from app.config import settings  # noqa: E402
-from app.models.question import Question  # noqa: E402
+from app.config import settings
+from app.models.question import Question
 
 _SEED_FILE = Path(__file__).resolve().parent / "seed" / "questions.json"
 

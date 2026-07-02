@@ -9,6 +9,7 @@ from ..models.question import Question
 from ..models.session import InterviewSession
 from ..models.user import User
 from ..services.auth import decode_token
+from ..services.realtime_proxy import run_proxy_session
 
 router = APIRouter(prefix="/interviews", tags=["realtime"])
 
@@ -62,4 +63,13 @@ async def live_interview(
         json.dumps({"type": "session_created", "session_id": str(session.id)})
     )
 
-    await websocket.close(code=status.WS_1000_NORMAL_CLOSURE, reason="TODO: proxy not yet implemented")
+    try:
+        await run_proxy_session(
+            websocket=websocket,
+            session=session,
+            question=question,
+            openai_api_key=settings.openai_api_key,
+            mq_connection=websocket.app.state.mq_connection,
+        )
+    except WebSocketDisconnect:
+        pass

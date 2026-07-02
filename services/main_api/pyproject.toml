@@ -19,6 +19,7 @@ dependencies = [
     "python-multipart>=0.0.9",
     "openpyxl>=3.1",
     "mock-interview-shared",
+    "websockets>=16.0",
 ]
 
 [dependency-groups]

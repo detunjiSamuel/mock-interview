@@ -5,6 +5,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 from jose import JWTError
 
 from ..config import settings
+from ..models.interview import Interview
 from ..models.question import Question
 from ..models.session import InterviewSession
 from ..models.user import User
@@ -59,14 +60,24 @@ async def live_interview(
     )
     await session.insert(link_rule=WriteRules.DO_NOTHING)
 
+    # Create the Interview document upfront so the SSE stream and feedback
+    # endpoints (which look up Interview, not InterviewSession) use the right ID.
+    interview = Interview(
+        user=user,  # type: ignore[arg-type]
+        question=question,  # type: ignore[arg-type]
+        audio_url="",
+    )
+    await interview.insert(link_rule=WriteRules.DO_NOTHING)
+
     await websocket.send_text(
-        json.dumps({"type": "session_created", "session_id": str(session.id)})
+        json.dumps({"type": "session_created", "session_id": str(interview.id)})
     )
 
     try:
         await run_proxy_session(
             websocket=websocket,
             session=session,
+            interview=interview,
             question=question,
             openai_api_key=settings.openai_api_key,
             mq_connection=websocket.app.state.mq_connection,

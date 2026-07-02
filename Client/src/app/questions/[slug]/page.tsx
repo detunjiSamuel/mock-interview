@@ -168,7 +168,10 @@ export default function QuestionDetailPage() {
         data.interview,
         token!,
         (interview) => { setResult(interview); setWaitingForFeedback(false); },
-        () => setWaitingForFeedback(false)
+        () => {
+          setWaitingForFeedback(false);
+          setSubmitError("Feedback could not be delivered. Please try again.");
+        }
       );
     } catch {
       setSubmitError("Failed to submit. Please try again.");

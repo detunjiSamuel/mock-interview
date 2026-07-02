@@ -29,6 +29,14 @@ dev = [
 [tool.uv.sources]
 mock-interview-shared = { path = "../../shared", editable = true }
 
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py312"

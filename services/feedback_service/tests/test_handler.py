@@ -41,7 +41,10 @@ async def test_handle_publishes_feedback_result() -> None:
     mock_channel = MagicMock()
     mock_channel.default_exchange = mock_exchange
 
-    raw = aio_pika.Message(body=json.dumps(_VALID_REQUEST).encode())
+    raw = MagicMock()
+    raw.body = json.dumps(_VALID_REQUEST).encode()
+    raw.process.return_value.__aenter__ = AsyncMock(return_value=None)
+    raw.process.return_value.__aexit__ = AsyncMock(return_value=False)
 
     with patch("app.handlers.feedback.generate_feedback", new=AsyncMock(return_value=_MOCK_SCORE)):
         await handle(raw, mock_channel, _SETTINGS)

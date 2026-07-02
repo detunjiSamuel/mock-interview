@@ -9,10 +9,13 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from mock_interview_shared.mq.client import declare_queues, get_connection
 
 from .config import settings
+from .logging_config import CorrelationIDMiddleware, configure_logging
 from .models.interview import Interview
 from .models.question import Question
 from .models.user import User
 from .routers import auth, internal, interviews, questions
+
+configure_logging()
 
 
 @asynccontextmanager
@@ -48,6 +51,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(CorrelationIDMiddleware)
 
 # Routers
 app.include_router(auth.router, prefix="/api")

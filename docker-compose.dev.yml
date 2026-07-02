@@ -1,0 +1,33 @@
+# Development overrides — use with:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+# Mounts live source trees into the running containers so code changes are
+# visible without a full image rebuild.  main-api also gets --reload so
+# uvicorn picks up edits automatically; the worker services restart the
+# container to apply changes.
+
+services:
+  main-api:
+    volumes:
+      - ./services/main_api/app:/workspace/services/main_api/app
+      - ./shared:/workspace/shared
+    command:
+      - uv
+      - run
+      - uvicorn
+      - app.main:app
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+      - --reload
+
+  transcript-service:
+    volumes:
+      - ./services/transcript_service/app:/workspace/services/transcript_service/app
+      - ./shared:/workspace/shared
+
+  feedback-service:
+    volumes:
+      - ./services/feedback_service/app:/workspace/services/feedback_service/app
+      - ./shared:/workspace/shared

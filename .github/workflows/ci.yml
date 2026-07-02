@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  lint-and-test:
+    name: Lint and test (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [main_api, transcript_service, feedback_service]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v4
+        with:
+          python-version: "3.12"
+
+      - name: Cache uv packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ matrix.service }}-${{ hashFiles(format('services/{0}/uv.lock', matrix.service)) }}
+          restore-keys: |
+            ${{ runner.os }}-uv-${{ matrix.service }}-
+
+      - name: Install dependencies
+        working-directory: services/${{ matrix.service }}
+        run: uv sync --frozen
+
+      - name: Lint
+        working-directory: services/${{ matrix.service }}
+        run: |
+          uv run ruff check .
+          uv run black --check .
+
+      - name: Test
+        working-directory: services/${{ matrix.service }}
+        env:
+          JWT_SECRET: test-jwt-secret-for-ci
+          INTERNAL_API_SECRET: test-internal-secret-for-ci
+        run: uv run pytest -q
+
+  docker-build:
+    name: Build Docker images
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker images
+        run: docker compose build

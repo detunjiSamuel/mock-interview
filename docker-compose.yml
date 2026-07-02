@@ -61,13 +61,14 @@ services:
       - RABBITMQ_URI=amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672
       - JWT_SECRET=${JWT_SECRET}
       - INTERNAL_API_SECRET=${INTERNAL_API_SECRET}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
       - FILE_STORAGE_PATH=/workspace/services/main_api/storage
     volumes:
       - main_api_storage:/workspace/services/main_api/storage
     networks:
       - interview-network
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8000/health"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -93,7 +94,7 @@ services:
     networks:
       - interview-network
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8001/health"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -115,7 +116,7 @@ services:
     networks:
       - interview-network
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8002/health"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
       interval: 15s
       timeout: 5s
       retries: 5

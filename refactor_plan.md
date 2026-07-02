@@ -185,23 +185,30 @@ app/
 
 ### Phase 8 — Real-Time Interview Sessions (Live Mode)
 
-Replaces "record → upload → wait" with a live, conversational interview experience. The user speaks directly to an AI interviewer that listens, responds, and asks follow-up questions in real time.
+Adds a live, conversational interview mode **alongside** the existing "record → upload → wait" flow. Both modes are fully supported and accessible from the UI. The reason is intentional: the async flow demonstrates the MQ/worker pipeline; the live mode demonstrates the OpenAI Realtime API — two distinct architectural patterns that are both worth showing to recruiters.
 
-**Architecture:**
+**Two modes, both first-class:**
+| Mode | User experience | Tech demonstrated |
+|---|---|---|
+| Async (existing) | Record audio → upload → wait for SSE feedback | RabbitMQ workers, Whisper, GPT-4o, SSE |
+| Live (new) | Speak live to AI interviewer, get feedback at the end | OpenAI Realtime API, WebSocket proxy, AudioContext |
+
+**Architecture (Live Mode):**
 - OpenAI **Realtime API** (WebSocket-based, streaming audio in / streaming audio out) acts as the AI interviewer
 - FastAPI main API acts as a **proxy/session manager** — opens a WebSocket to OpenAI Realtime and relays audio between client and OpenAI
 - Frontend streams microphone audio over WebSocket to the backend; receives and plays AI audio back
-- Session transcript stored in MongoDB at end of interview; feedback generation triggered automatically
+- Session transcript stored in MongoDB at end of interview; feedback generation triggered via existing feedback service (same GPT-4o worker, transcript as input)
 
 **Tasks:**
 - [ ] Design `InterviewSession` model — session_id, user, question, messages (role/content/timestamp array), status (active/completed), created_at
 - [ ] `routers/realtime.py` — WebSocket endpoint `/api/interviews/live/{question_slug}` proxying to OpenAI Realtime API
 - [ ] `services/realtime_proxy.py` — bidirectional WebSocket relay; injects system prompt (question + interviewer persona) on session start; saves transcript on end
 - [ ] System prompt: AI persona as professional interviewer — opens with the question, listens actively, asks one follow-up, signals completion verbally
+- [ ] Frontend: question detail page offers two clearly labelled buttons — **"Practice (Async)"** and **"Live Interview"**
 - [ ] Frontend: `LiveInterview` component — WebAudio API microphone capture, WebSocket streaming, AudioContext playback of AI audio
 - [ ] Frontend: session controls — Start, End Session, mute toggle, live scrolling transcript
-- [ ] Post-session: trigger async feedback via existing feedback service (transcript as input instead of Whisper output)
-- [ ] Keep old "record and submit" flow as fallback (offline prep / poor connectivity)
+- [ ] Post-session: reuse existing feedback service — publish `FeedbackRequest` to `feedback_processing` queue with the session transcript; SSE delivers feedback the same way as async mode
+- [ ] Async mode (record + upload) remains fully intact — no routes removed, no UI elements removed
 - [ ] Tests: `test_realtime.py` — mock OpenAI Realtime WebSocket, assert session lifecycle (start → exchange → end → transcript saved)
 
 ---

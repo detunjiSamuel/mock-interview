@@ -1,144 +1,111 @@
-"use client"
-import Err from '@/app/components/err/err';
-import Link from 'next/link'
+"use client";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/app/AuthContext";
+import { apiClient } from "@/lib/api-client";
 
-import { redirect, useRouter } from 'next/navigation'
+const schema = z.object({
+  email: z.string().email("Enter a valid email"),
+  password: z.string().min(1, "Password is required"),
+});
 
+type FormData = z.infer<typeof schema>;
 
-import React , { useState, useEffect } from 'react';
+export default function LoginPage() {
+  const { login, isLoggedIn } = useAuth();
+  const router = useRouter();
 
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<FormData>({ resolver: zodResolver(schema) });
 
-import { MAIN_API_URL, useAuth } from '@/app/AuthContext';
-
-const defaultErr = {
- msg: undefined,
- err: undefined
-}
-
-
-export default function Home() {
-
-
- const authHook = useAuth();
-
- const [email, setEmail] = useState('');
- const [password, setPassword] = useState('');
-
- const [err, setErr] = useState({ ...defaultErr });
-
-
- const loginRequest = async () => {
-  const res = await fetch(MAIN_API_URL + '/api/auth/login', {
-   cache: 'no-store',
-   method: 'POST',
-   headers: {
-    "Content-Type": "application/json",
-   },
-   body: JSON.stringify({
-    email,
-    password
-   })
+  if (isLoggedIn) {
+    router.push("/");
+    return null;
   }
-  )
-  const data = await res.json()
-  console.log(data)
 
-  if (!res.ok)
-   setErr({
-    msg: data.msg,
-    err: data.err
-   })
+  const onSubmit = async (values: FormData) => {
+    try {
+      const { data } = await apiClient.post("/api/auth/login", values);
+      await login(data.token, data.email);
+      router.push("/");
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
+        "Invalid credentials";
+      setError("root", { message: msg });
+    }
+  };
 
-  else
-   return data
- }
+  return (
+    <main className="flex min-h-screen justify-center items-center">
+      <div className="w-full max-w-sm">
+        <h2 className="text-center font-mono text-2xl font-bold text-gray-800 mb-4">
+          Log in to your account
+        </h2>
+        <p className="font-mono text-center text-gray-700 mb-6">
+          {"Don't have an account?"}{" "}
+          <Link href="/auth/register" className="underline hover:no-underline">
+            Sign up
+          </Link>
+        </p>
 
+        {errors.root && (
+          <div className="mb-4 p-3 text-sm text-red-700 bg-red-100 rounded">
+            {errors.root.message}
+          </div>
+        )}
 
- const handleSubmit = async (e) => {
-  e.preventDefault();
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div>
+            <label htmlFor="email" className="block text-gray-800 font-semibold mb-1">
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              autoComplete="email"
+              {...register("email")}
+              className="w-full border border-gray-300 px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+              placeholder="Enter your email"
+            />
+            {errors.email && (
+              <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>
+            )}
+          </div>
 
-  const userDetails = await loginRequest()
+          <div>
+            <label htmlFor="password" className="block text-gray-800 font-semibold mb-1">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              {...register("password")}
+              className="w-full border border-gray-300 px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+              placeholder="Enter your password"
+            />
+            {errors.password && (
+              <p className="mt-1 text-xs text-red-600">{errors.password.message}</p>
+            )}
+          </div>
 
-  if (!userDetails) {
-   setTimeout(() => {
-    setErr({
-     ...defaultErr
-    });
-   }, 1000);
-
-   return
-  }
-  authHook.login(userDetails.token, userDetails.email)
- };
-
-
- return (
-  authHook.isLoggedIn ? (redirect('/')) : (
-   <main className='flex min-h-screen justify-center items-center'>
-    <div className=" m-4">
-     <form
-      onSubmit={handleSubmit}
-     >
-      <div className="">
-       <h2 className="text-center font-mono text-2xl font-bold text-gray-800 mb-6">
-        Log in to your account
-       </h2>
-       <div className="font-mono text-xl font-bold text-gray-800 mb-6 text-center">
-        {"Don't have an account?"} <Link href="/auth/register" className='underline hover:no-underline'>Sign up</Link>
-       </div>
-
-       {
-        err.msg && <Err msg={err.msg} err={err.err} />
-       }
-
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full bg-black text-white font-semibold py-2 px-4 rounded-md hover:bg-gray-800 disabled:opacity-50 transition-colors"
+          >
+            {isSubmitting ? "Signing in…" : "Sign in"}
+          </button>
+        </form>
       </div>
-
-      <div className="mb-4">
-       <label
-        htmlFor="email"
-        className="block text-gray-800 font-semibold mb-1"
-       >
-        Email
-       </label>
-       <input
-        type="email"
-        id="email"
-        className="w-full border border-gray-300 px-4 py-2 rounded-md focus:outline-none focus:border-indigo-500"
-        placeholder="Enter your email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-       />
-      </div>
-      <div className="mb-6">
-       <label
-        htmlFor="password"
-        className="block text-gray-800 font-semibold mb-1"
-       >
-        Password
-       </label>
-       <input
-        type="password"
-        id="password"
-        className="w-full border border-gray-300 px-4 py-2 rounded-md focus:outline-none focus:border-indigo-500"
-        placeholder="Enter your password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-       />
-      </div>
-
-      <div className='flex justify-center items-center'>
-       <button
-        type="submit"
-        className="bg-black hover:bg-red-300 text-white font-semibold py-2 px-4 rounded-md items-center w-full"
-       >
-        sign in
-       </button>
-      </div>
-
-     </form>
-    </div>
-
-   </main>
-  )
- );
+    </main>
+  );
 }

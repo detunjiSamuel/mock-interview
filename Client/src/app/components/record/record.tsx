@@ -2,9 +2,9 @@ import React, { useState, useRef } from 'react';
 
 const RecordingButton = () => {
   const [isRecording, setIsRecording] = useState(false);
-  const [recordedChunks, setRecordedChunks] = useState([]);
-  const [recordedAudio, setRecordedAudio] = useState(null);
-  const audioRef = useRef(null);
+  const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
+  const [recordedAudio, setRecordedAudio] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   const handleButtonClick = () => {
     if (!isRecording) {
@@ -40,9 +40,10 @@ const RecordingButton = () => {
   };
 
   const stopRecording = () => {
-    const mediaStream = audioRef.current.srcObject;
-    const mediaTracks = mediaStream.getTracks();
-    mediaTracks.forEach((track) => track.stop());
+    if (!audioRef.current) return;
+    const mediaStream = audioRef.current.srcObject as MediaStream | null;
+    if (!mediaStream) return;
+    mediaStream.getTracks().forEach((track) => track.stop());
   };
 
   return (

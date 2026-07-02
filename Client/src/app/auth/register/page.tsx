@@ -1,209 +1,139 @@
-'use client';
+"use client";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/app/AuthContext";
+import { apiClient } from "@/lib/api-client";
 
-import { useState, FormEvent } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useAuth, MAIN_API_URL } from '@/app/AuthContext';
-import LoadingSpinner from '@/app/components/common/LoadingSpinner';
+const schema = z
+  .object({
+    email: z.string().email("Enter a valid email"),
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    confirmPassword: z.string(),
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+type FormData = z.infer<typeof schema>;
 
 export default function RegisterPage() {
-  const router = useRouter();
   const { login, isLoggedIn } = useAuth();
-  
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  
-  // If already logged in, redirect to homepage
+  const router = useRouter();
+
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<FormData>({ resolver: zodResolver(schema) });
+
   if (isLoggedIn) {
-    router.push('/');
+    router.push("/");
     return null;
   }
-  
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    
-    // Form validation
-    if (!email || !password || !confirmPassword) {
-      setError('Please fill in all fields');
-      return;
-    }
-    
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-    
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters long');
-      return;
-    }
-    
-    setIsLoading(true);
-    setError(null);
-    
+
+  const onSubmit = async (values: FormData) => {
     try {
-      const response = await fetch(`${MAIN_API_URL}/api/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          password
-        })
+      const { data } = await apiClient.post("/api/auth/register", {
+        email: values.email,
+        password: values.password,
       });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.msg || data.err || 'Registration failed');
-      }
-      
-      // Registration successful
-      login(data.token, data.email);
-      router.push('/');
-    } catch (err) {
-      console.error('Registration error:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred during registration');
-    } finally {
-      setIsLoading(false);
+      await login(data.token, data.email);
+      router.push("/");
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
+        "Registration failed";
+      setError("root", { message: msg });
     }
   };
-  
+
   return (
     <main className="flex min-h-screen justify-center items-center bg-gray-50">
       <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-lg">
-        <h2 className="text-center text-3xl font-extrabold text-gray-900 mb-6">
+        <h2 className="text-center text-3xl font-extrabold text-gray-900 mb-4">
           Create your account
         </h2>
-        
         <p className="text-center text-gray-600 mb-6">
-          Already have an account?{' '}
-          <Link href="/auth/login" className="text-blue-600 hover:text-blue-800 hover:underline">
+          Already have an account?{" "}
+          <Link href="/auth/login" className="text-blue-600 hover:underline">
             Log in
           </Link>
         </p>
-        
-        {error && (
+
+        {errors.root && (
           <div className="mb-4 p-4 text-sm text-red-700 bg-red-100 rounded-lg">
-            {error}
+            {errors.root.message}
           </div>
         )}
-        
-        <form onSubmit={handleSubmit} className="space-y-6">
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
               Email address
             </label>
             <input
               id="email"
-              name="email"
               type="email"
               autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              {...register("email")}
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
               placeholder="Enter your email"
             />
+            {errors.email && (
+              <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>
+            )}
           </div>
-          
+
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
               Password
             </label>
             <input
               id="password"
-              name="password"
               type="password"
               autoComplete="new-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              {...register("password")}
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-              placeholder="Create a password"
+              placeholder="At least 8 characters"
             />
-            <p className="mt-1 text-xs text-gray-500">
-              Password should be at least 8 characters
-            </p>
+            {errors.password && (
+              <p className="mt-1 text-xs text-red-600">{errors.password.message}</p>
+            )}
           </div>
-          
+
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="confirmPassword"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Confirm password
             </label>
             <input
               id="confirmPassword"
-              name="confirmPassword"
               type="password"
               autoComplete="new-password"
-              required
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              {...register("confirmPassword")}
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-              placeholder="Confirm your password"
+              placeholder="Repeat your password"
             />
+            {errors.confirmPassword && (
+              <p className="mt-1 text-xs text-red-600">{errors.confirmPassword.message}</p>
+            )}
           </div>
-          
-          <div>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-3 px-4 bg-black text-white font-semibold rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black"
-            >
-              {isLoading ? (
-                <span className="flex justify-center items-center">
-                  <LoadingSpinner size="small" color="white" />
-                  <span className="ml-2">Creating account...</span>
-                </span>
-              ) : (
-                'Create account'
-              )}
-            </button>
-          </div>
+
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full py-3 px-4 bg-black text-white font-semibold rounded-md hover:bg-gray-800 disabled:opacity-50 transition-colors"
+          >
+            {isSubmitting ? "Creating account…" : "Create account"}
+          </button>
         </form>
-        
-        <div className="mt-8">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">
-                Or continue with
-              </span>
-            </div>
-          </div>
-          
-          <div className="mt-6 grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              className="w-full py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-            >
-              Google
-            </button>
-            <button
-              type="button"
-              className="w-full py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-            >
-              GitHub
-            </button>
-          </div>
-        </div>
-        
-        <p className="mt-6 text-xs text-center text-gray-500">
-          By creating an account, you agree to our{' '}
-          <Link href="/terms" className="text-blue-600 hover:text-blue-800 hover:underline">
-            Terms of Service
-          </Link>{' '}
-          and{' '}
-          <Link href="/privacy" className="text-blue-600 hover:text-blue-800 hover:underline">
-            Privacy Policy
-          </Link>
-        </p>
       </div>
     </main>
   );

@@ -3,6 +3,7 @@ import os
 os.environ.setdefault("JWT_SECRET", "test-secret-key-for-pytest")
 os.environ.setdefault("INTERNAL_API_SECRET", "test-internal-secret")
 os.environ.setdefault("RABBITMQ_URI", "amqp://guest:guest@localhost/")
+os.environ.setdefault("OPENAI_API_KEY", "sk-test-fake-key-for-pytest")
 
 # passlib 1.7.x is incompatible with bcrypt >= 4.0: the library now raises ValueError
 # instead of silently truncating passwords > 72 bytes, which breaks passlib's internal

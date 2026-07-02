@@ -1,0 +1,137 @@
+[
+  {
+    "topic": "Tell me about yourself",
+    "text": "Give a brief overview of your background, skills, and what brings you to this role.",
+    "slug": "tell-me-about-yourself",
+    "difficulty": "easy",
+    "category": "general",
+    "helpful_tip": "Structure your answer using the Present-Past-Future framework: who you are now, what led you here, and where you want to go.",
+    "video_url": null
+  },
+  {
+    "topic": "Greatest Strength",
+    "text": "What is your greatest professional strength and how have you applied it?",
+    "slug": "greatest-strength",
+    "difficulty": "easy",
+    "category": "general",
+    "helpful_tip": "Pick a strength that is directly relevant to the role and back it up with a specific, concrete example.",
+    "video_url": null
+  },
+  {
+    "topic": "Greatest Weakness",
+    "text": "What is your greatest professional weakness and what are you doing to improve it?",
+    "slug": "greatest-weakness",
+    "difficulty": "medium",
+    "category": "general",
+    "helpful_tip": "Choose a genuine weakness — not a disguised strength. Show self-awareness and focus on the concrete steps you are taking to improve.",
+    "video_url": null
+  },
+  {
+    "topic": "Conflict with a Colleague",
+    "text": "Describe a time you had a conflict with a colleague. How did you handle it and what was the outcome?",
+    "slug": "conflict-with-colleague",
+    "difficulty": "medium",
+    "category": "behavioral",
+    "helpful_tip": "Use the STAR method. Focus on how you resolved the conflict constructively, not on who was right.",
+    "video_url": null
+  },
+  {
+    "topic": "Tight Deadline",
+    "text": "Tell me about a time you had to deliver a project under a very tight deadline. What did you do?",
+    "slug": "tight-deadline",
+    "difficulty": "medium",
+    "category": "behavioral",
+    "helpful_tip": "Highlight your prioritisation and time management skills. Quantify the deadline and the outcome where possible.",
+    "video_url": null
+  },
+  {
+    "topic": "Leadership Experience",
+    "text": "Describe a situation where you took the lead on a project or initiative. What was the result?",
+    "slug": "leadership-experience",
+    "difficulty": "medium",
+    "category": "behavioral",
+    "helpful_tip": "Leadership does not require a formal title. You can lead by influencing, coordinating, or stepping up in a gap.",
+    "video_url": null
+  },
+  {
+    "topic": "Handling Failure",
+    "text": "Tell me about a time you failed at something. What did you learn and what would you do differently?",
+    "slug": "handling-failure",
+    "difficulty": "hard",
+    "category": "behavioral",
+    "helpful_tip": "Be honest about the failure — interviewers can tell when examples are vague. The learning and recovery are what matter most.",
+    "video_url": null
+  },
+  {
+    "topic": "Disagreeing with a Manager",
+    "text": "Have you ever disagreed with your manager's decision? How did you handle it?",
+    "slug": "disagreeing-with-manager",
+    "difficulty": "hard",
+    "category": "situational",
+    "helpful_tip": "Show you can advocate for your view professionally while still respecting the final decision. Never badmouth the manager.",
+    "video_url": null
+  },
+  {
+    "topic": "Prioritising Multiple Projects",
+    "text": "How do you manage your workload when you have multiple projects competing for your time?",
+    "slug": "prioritising-multiple-projects",
+    "difficulty": "medium",
+    "category": "situational",
+    "helpful_tip": "Walk through your actual prioritisation system — tools, frameworks, how you communicate trade-offs to stakeholders.",
+    "video_url": null
+  },
+  {
+    "topic": "Adapting to Change",
+    "text": "Describe a time when a project or plan changed significantly. How did you adapt?",
+    "slug": "adapting-to-change",
+    "difficulty": "medium",
+    "category": "situational",
+    "helpful_tip": "Emphasise flexibility and a proactive mindset. Show you stayed productive and positive despite the disruption.",
+    "video_url": null
+  },
+  {
+    "topic": "System Design — URL Shortener",
+    "text": "Design a URL shortening service like bit.ly. Walk through your architecture, data model, and how you would scale it.",
+    "slug": "system-design-url-shortener",
+    "difficulty": "hard",
+    "category": "technical",
+    "helpful_tip": "Cover the core components first (hashing, storage, redirect), then scaling concerns (caching, CDN, database sharding). Ask clarifying questions before diving in.",
+    "video_url": null
+  },
+  {
+    "topic": "REST vs GraphQL",
+    "text": "When would you choose REST over GraphQL, and when would you choose GraphQL over REST?",
+    "slug": "rest-vs-graphql",
+    "difficulty": "medium",
+    "category": "technical",
+    "helpful_tip": "Think about query flexibility, over/under-fetching, tooling maturity, and team familiarity. Give a concrete use case for each choice.",
+    "video_url": null
+  },
+  {
+    "topic": "Database Indexing",
+    "text": "Explain what a database index is, how it works, and the trade-offs of adding one.",
+    "slug": "database-indexing",
+    "difficulty": "medium",
+    "category": "technical",
+    "helpful_tip": "Cover B-tree structure, read vs write trade-offs, and when an index can actually hurt performance (low-cardinality columns, write-heavy tables).",
+    "video_url": null
+  },
+  {
+    "topic": "Why This Company",
+    "text": "Why do you want to work here specifically, rather than at a competitor?",
+    "slug": "why-this-company",
+    "difficulty": "easy",
+    "category": "general",
+    "helpful_tip": "Research the company's mission, recent work, and culture before the interview. Reference something specific — generic answers are easy to spot.",
+    "video_url": null
+  },
+  {
+    "topic": "Where Do You See Yourself in 5 Years",
+    "text": "Where do you see yourself professionally in five years?",
+    "slug": "where-do-you-see-yourself-in-5-years",
+    "difficulty": "easy",
+    "category": "general",
+    "helpful_tip": "Show ambition that is realistic and aligned with what the company can offer. Avoid answers that suggest you will leave quickly or have no plan.",
+    "video_url": null
+  }
+]

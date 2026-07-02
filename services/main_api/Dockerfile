@@ -1,21 +1,14 @@
-FROM node:22-alpine
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
-WORKDIR /app
+WORKDIR /workspace
 
-# Copy package.json and package-lock.json first for better layer caching
-COPY package*.json ./
+COPY shared/ shared/
+COPY services/main_api/ services/main_api/
 
-# Install dependencies
-RUN npm ci --only=production
+WORKDIR /workspace/services/main_api
 
-# Copy application files
-COPY . .
+RUN uv sync --frozen --no-dev
 
-# Create directory for file storage
-RUN mkdir -p /app/storage
+EXPOSE 8000
 
-# Expose the port the app runs on
-EXPOSE 8080
-
-# Start the application
-CMD ["node", "server.js"]
+CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

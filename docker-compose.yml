@@ -32,25 +32,24 @@ services:
 
   # Main API service
   main-api:
-    build: 
-      context: ./services/main_api
-      dockerfile: Dockerfile
+    build:
+      context: .
+      dockerfile: services/main_api/Dockerfile
     container_name: interview-main-api
     restart: always
     ports:
-      - "8080:8080"
+      - "8000:8000"
     depends_on:
       - mongodb
       - rabbitmq
     environment:
       - MONGO_URI=mongodb://${MONGO_USER:-root}:${MONGO_PASSWORD:-example}@mongodb:27017/interview?authSource=admin
       - RABBITMQ_URI=amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672
-      - JWT_SECRET=${JWT_SECRET:-your_jwt_secret}
-      - PORT=8080
-      - NODE_ENV=production
-      - FILE_STORAGE_PATH=/app/storage
+      - JWT_SECRET=${JWT_SECRET}
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET}
+      - FILE_STORAGE_PATH=/workspace/services/main_api/storage
     volumes:
-      - main_api_storage:/app/storage
+      - main_api_storage:/workspace/services/main_api/storage
     networks:
       - interview-network
 
@@ -66,7 +65,8 @@ services:
       - main-api
     environment:
       - RABBITMQ_URI=amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672
-      - MAIN_API_URL=http://main-api:8080
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - MAIN_API_URL=http://main-api:8000
       - MAIN_API_APP_ID=${MAIN_API_APP_ID:-transcript_service}
     networks:
       - interview-network
@@ -90,7 +90,7 @@ services:
   # # Frontend client
   frontend:
     build:
-      context: ./client
+      context: ./Client
       dockerfile: Dockerfile
     container_name: interview-frontend
     restart: always
@@ -99,7 +99,7 @@ services:
     depends_on:
       - main-api
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8080
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
     networks:
       - interview-network
 

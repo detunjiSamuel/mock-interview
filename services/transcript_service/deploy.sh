@@ -1,1 +1,0 @@
-gcloud functions deploy transcipt-gen-service --gen2 --runtime=python311 --source=. --entry-point=hello_http --trigger-http --env-vars-file .env.yaml --max-instances=30

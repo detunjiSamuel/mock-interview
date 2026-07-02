@@ -1,6 +1,6 @@
 "use client";
 import React, { createContext, useState, useContext, ReactNode, useEffect } from "react";
-import { apiClient } from "@/lib/api-client";
+import { apiClient, setApiToken } from "@/lib/api-client";
 
 interface User {
   email: string;
@@ -37,6 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const sessionRes = await fetch("/api/auth/session").then((r) => r.json());
         const sessionToken: string | null = sessionRes.token ?? null;
         if (sessionToken) {
+          setApiToken(sessionToken);
           const profile = await apiClient.get("/api/auth/profile");
           setToken(sessionToken);
           setUser({ email: profile.data.email, id: profile.data.id });
@@ -56,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token: newToken }),
     });
+    setApiToken(newToken);
     setToken(newToken);
     setUser({ email });
     setIsLoggedIn(true);
@@ -63,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     await fetch("/api/auth/session", { method: "DELETE" });
+    setApiToken(null);
     setToken(null);
     setUser(null);
     setIsLoggedIn(false);

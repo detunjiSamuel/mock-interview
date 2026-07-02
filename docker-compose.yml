@@ -62,6 +62,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - INTERNAL_API_SECRET=${INTERNAL_API_SECRET}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - CORS_ORIGINS=${CORS_ORIGINS:-["http://localhost:3000","http://localhost:3001"]}
       - FILE_STORAGE_PATH=/workspace/services/main_api/storage
     volumes:
       - main_api_storage:/workspace/services/main_api/storage
@@ -135,7 +136,7 @@ services:
       main-api:
         condition: service_healthy
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - INTERNAL_API_URL=http://main-api:8000
     networks:
       - interview-network
 

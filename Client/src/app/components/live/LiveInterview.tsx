@@ -166,9 +166,8 @@ export default function LiveInterview({ questionSlug }: LiveInterviewProps) {
   // ── SSE feedback listener ───────────────────────────────────────────────────
 
   const listenForFeedback = useCallback(async (sid: string, authToken: string) => {
-    const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
     try {
-      const res = await fetch(`${base}/api/interviews/${sid}/stream`, {
+      const res = await fetch(`/backend/api/interviews/${sid}/stream`, {
         headers: { Authorization: `Bearer ${authToken}` },
       });
       if (!res.ok || !res.body) return;
@@ -243,7 +242,14 @@ export default function LiveInterview({ questionSlug }: LiveInterviewProps) {
         }
 
         case "error": {
-          setErrorMsg((msg.detail as string) ?? "An error occurred during the session.");
+          // msg.detail comes from our own proxy; msg.error.message comes from
+          // OpenAI's Realtime API error events forwarded as-is.
+          const oeError = msg.error as { message?: string } | undefined;
+          const detail =
+            (msg.detail as string | undefined) ??
+            oeError?.message ??
+            "An error occurred during the session.";
+          setErrorMsg(detail);
           break;
         }
       }
@@ -264,10 +270,14 @@ export default function LiveInterview({ questionSlug }: LiveInterviewProps) {
     setFeedback(null);
     setSessionId(null);
 
-    const baseWs = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(
-      /^http/,
-      "ws"
-    );
+    const proto = window.location.protocol === "https:" ? "wss" : "ws";
+    // Rewrites don't proxy WebSockets — connect directly to port 8000.
+    // On Codespace the host is <name>-3000.app.github.dev → swap to -8000.
+    // On localhost swap :3000 → :8000.
+    const wsHost = window.location.host
+      .replace(/-3000\./, "-8000.")
+      .replace(/:3000$/, ":8000");
+    const baseWs = `${proto}://${wsHost}`;
     const ws = new WebSocket(
       `${baseWs}/api/interviews/live/${questionSlug}?token=${encodeURIComponent(token)}`
     );

@@ -39,12 +39,11 @@ interface InterviewResult {
 async function listenForFeedback(
   interviewId: string,
   token: string,
-  baseURL: string,
   onFeedback: (data: InterviewResult) => void,
   onError: () => void
 ) {
   try {
-    const res = await fetch(`${baseURL}/api/interviews/${interviewId}/stream`, {
+    const res = await fetch(`/backend/api/interviews/${interviewId}/stream`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok || !res.body) { onError(); return; }
@@ -125,6 +124,7 @@ export default function QuestionDetailPage() {
 
   const [mode, setMode] = useState<"async" | "live">("async");
   const [audioUrl, setAudioUrl] = useState("");
+  const [recordingBlob, setRecordingBlob] = useState<Blob | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [result, setResult] = useState<InterviewResult | null>(null);
@@ -137,27 +137,28 @@ export default function QuestionDetailPage() {
     queryFn: () => apiClient.get(`/api/questions/${slug}`).then((r) => r.data),
   });
 
-  const baseURL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
   const handleAudioComplete = (blob: Blob) => {
+    setRecordingBlob(blob);
     setAudioUrl(URL.createObjectURL(blob));
   };
 
   const handleRedo = () => {
     setAudioUrl("");
+    setRecordingBlob(null);
     if (audioRef.current) audioRef.current.src = "";
   };
 
   const handleSubmit = async () => {
     if (!isLoggedIn) { router.push("/auth/login"); return; }
-    if (!recorderControls.recordingBlob) { setSubmitError("No recording found."); return; }
+    if (!recordingBlob) { setSubmitError("No recording found."); return; }
 
     setSubmitting(true);
     setSubmitError(null);
 
     try {
       const form = new FormData();
-      form.append("audio_response", recorderControls.recordingBlob, "recording.webm");
+      form.append("audio_response", recordingBlob, "recording.webm");
       form.append("question_id", slug);
 
       const { data } = await apiClient.post("/api/interviews/submit-recording", form);
@@ -166,7 +167,6 @@ export default function QuestionDetailPage() {
       listenForFeedback(
         data.interview,
         token!,
-        baseURL,
         (interview) => { setResult(interview); setWaitingForFeedback(false); },
         () => setWaitingForFeedback(false)
       );

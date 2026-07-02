@@ -6,6 +6,7 @@ import { AudioRecorder, useAudioRecorder } from "react-audio-voice-recorder";
 import { useAuth } from "@/app/AuthContext";
 import { apiClient } from "@/lib/api-client";
 import LoadingSpinner from "@/app/components/common/LoadingSpinner";
+import LiveInterview from "@/app/components/live/LiveInterview";
 
 interface Question {
   id: string;
@@ -122,6 +123,7 @@ export default function QuestionDetailPage() {
   const params = useParams();
   const slug = params.slug as string;
 
+  const [mode, setMode] = useState<"async" | "live">("async");
   const [audioUrl, setAudioUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -238,7 +240,40 @@ export default function QuestionDetailPage() {
           ← Back to Questions
         </button>
 
-        {result ? (
+        {/* Mode selector */}
+        <div className="flex gap-1 p-1 bg-gray-100 rounded-lg self-start">
+          <button
+            onClick={() => setMode("async")}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              mode === "async"
+                ? "bg-white text-black shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Practice (Async)
+          </button>
+          <button
+            onClick={() => setMode("live")}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              mode === "live"
+                ? "bg-white text-black shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Live Interview
+          </button>
+        </div>
+
+        {mode === "live" ? (
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h2 className="font-mono text-xl font-bold mb-6">Live Interview</h2>
+            <p className="text-gray-600 text-sm mb-6">
+              Speak directly with an AI interviewer in real time. Your answer will be evaluated and
+              feedback will be delivered once the session ends.
+            </p>
+            <LiveInterview questionSlug={slug} />
+          </div>
+        ) : result ? (
           <div className="bg-white rounded-lg shadow-lg p-6">
             <h2 className="font-mono text-xl font-bold mb-4">Feedback</h2>
             {result.audio_transcript && (

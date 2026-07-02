@@ -24,3 +24,9 @@ class Category(str, Enum):
     TECHNICAL = "technical"
     SITUATIONAL = "situational"
     GENERAL = "general"
+
+
+class SessionStatus(str, Enum):
+    ACTIVE = "active"
+    COMPLETED = "completed"
+    FAILED = "failed"

@@ -1,5 +1,4 @@
 from httpx import AsyncClient
-from tests.conftest import make_auth_headers
 
 
 async def test_register_happy_path(async_client: AsyncClient) -> None:

@@ -4,7 +4,11 @@ import os
 import aio_pika
 from aio_pika.abc import AbstractChannel, AbstractIncomingMessage
 
-from mock_interview_shared.schemas.messages import FeedbackRequest, TranscriptRequest, TranscriptResult
+from mock_interview_shared.schemas.messages import (
+    FeedbackRequest,
+    TranscriptRequest,
+    TranscriptResult,
+)
 
 from ..config import Settings
 from ..services.whisper import transcribe
@@ -12,7 +16,9 @@ from ..services.whisper import transcribe
 logger = logging.getLogger(__name__)
 
 
-async def handle(message: AbstractIncomingMessage, channel: AbstractChannel, settings: Settings) -> None:
+async def handle(
+    message: AbstractIncomingMessage, channel: AbstractChannel, settings: Settings
+) -> None:
     async with message.process(requeue=False):
         req = TranscriptRequest.model_validate_json(message.body)
         audio_path = os.path.join(settings.storage_path, req.recording_path)

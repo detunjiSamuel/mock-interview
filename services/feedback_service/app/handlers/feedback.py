@@ -11,7 +11,9 @@ from ..services.ai import generate_feedback
 logger = logging.getLogger(__name__)
 
 
-async def handle(message: AbstractIncomingMessage, channel: AbstractChannel, settings: Settings) -> None:
+async def handle(
+    message: AbstractIncomingMessage, channel: AbstractChannel, settings: Settings
+) -> None:
     async with message.process(requeue=False):
         req = FeedbackRequest.model_validate_json(message.body)
 

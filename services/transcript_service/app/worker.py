@@ -1,5 +1,4 @@
 import asyncio
-import functools
 import logging
 
 import uvicorn
@@ -26,7 +25,9 @@ async def main() -> None:
 
     await queues["transcript_processing"].consume(on_message)
 
-    server_config = uvicorn.Config(health_app, host="0.0.0.0", port=settings.health_port, log_level="warning")
+    server_config = uvicorn.Config(
+        health_app, host="0.0.0.0", port=settings.health_port, log_level="warning"
+    )
     server = uvicorn.Server(server_config)
 
     await asyncio.gather(

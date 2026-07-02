@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from .enums import MessageType, Difficulty, Category
@@ -22,7 +24,7 @@ class FeedbackRequest(BaseModel):
 
 
 class TranscriptResult(BaseModel):
-    type: MessageType = MessageType.TRANSCRIPT
+    type: Literal[MessageType.TRANSCRIPT] = MessageType.TRANSCRIPT
     interview_id: str = Field(alias="interview")
     transcript: str
     app_id: str
@@ -39,7 +41,7 @@ class FeedbackScore(BaseModel):
 
 
 class FeedbackResult(BaseModel):
-    type: MessageType = MessageType.FEEDBACK
+    type: Literal[MessageType.FEEDBACK] = MessageType.FEEDBACK
     interview_id: str = Field(alias="interview")
     feedback: FeedbackScore | str
     app_id: str

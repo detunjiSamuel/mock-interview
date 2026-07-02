@@ -13,6 +13,12 @@ services:
       - mongodb_data:/data/db
     networks:
       - interview-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   # RabbitMQ message broker
   rabbitmq:
@@ -29,6 +35,12 @@ services:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
       - interview-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   # Main API service
   main-api:
@@ -40,8 +52,10 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - mongodb
-      - rabbitmq
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     environment:
       - MONGO_URI=mongodb://${MONGO_USER:-root}:${MONGO_PASSWORD:-example}@mongodb:27017/interview?authSource=admin
       - RABBITMQ_URI=amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672
@@ -52,6 +66,12 @@ services:
       - main_api_storage:/workspace/services/main_api/storage
     networks:
       - interview-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   # Transcript service
   transcript-service:
@@ -61,8 +81,10 @@ services:
     container_name: interview-transcript-service
     restart: always
     depends_on:
-      - rabbitmq
-      - main-api
+      rabbitmq:
+        condition: service_healthy
+      main-api:
+        condition: service_healthy
     environment:
       - RABBITMQ_URI=amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672
       - OPENAI_API_KEY=${OPENAI_API_KEY}
@@ -70,24 +92,36 @@ services:
       - MAIN_API_APP_ID=${MAIN_API_APP_ID:-transcript_service}
     networks:
       - interview-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8001/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
-  # # Feedback service
-  # feedback-service:
-  #   build:
-  #     context: .
-  #     dockerfile: services/feedback_service/Dockerfile
-  #   container_name: interview-feedback-service
-  #   restart: always
-  #   depends_on:
-  #     - rabbitmq
-  #   environment:
-  #     - RABBITMQ_URI=amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672
-  #     - OPENAI_API_KEY=${OPENAI_API_KEY:-your_api_key}
-  #     - TRANSCRIPT_APP_ID=${TRANSCRIPT_APP_ID:-transcript_service}
-  #   networks:
-  #     - interview-network
+  # Feedback service
+  feedback-service:
+    build:
+      context: .
+      dockerfile: services/feedback_service/Dockerfile
+    container_name: interview-feedback-service
+    restart: always
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - RABBITMQ_URI=amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    networks:
+      - interview-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8002/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
-  # # Frontend client
+  # Frontend client
   frontend:
     build:
       context: ./Client
@@ -97,7 +131,8 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - main-api
+      main-api:
+        condition: service_healthy
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
     networks:
